@@ -81,7 +81,7 @@ def perform_ocr_on_pdf(pdf_bytes):
         return None
 
 # --- Function to call LLM for structured data extraction ---
-async def extract_invoice_data_with_llm(raw_text):
+def extract_invoice_data_with_llm(raw_text): # Removed 'async' keyword
     """
     Uses the Gemini API to extract structured invoice data from raw OCR text.
     """
@@ -96,7 +96,7 @@ async def extract_invoice_data_with_llm(raw_text):
     Invoice Text:
     {raw_text}
     """
-    chatHistory.append({"role": "user", "parts": [{"text": prompt}]}) # Corrected .push to .append
+    chatHistory.append({"role": "user", "parts": [{"text": prompt}]})
 
     # Define the structured response schema
     payload = {
@@ -143,12 +143,12 @@ async def extract_invoice_data_with_llm(raw_text):
         }
     }
 
-    try: # Corrected from 'try {'
+    try:
         apiKey = "" # Leave as empty string for Canvas environment
         apiUrl = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={apiKey}"
         
         headers = { 'Content-Type': 'application/json' }
-        response = requests.post(apiUrl, headers=headers, json=payload) # Corrected from await fetch
+        response = requests.post(apiUrl, headers=headers, json=payload)
         response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
         result = response.json()
 
@@ -228,12 +228,8 @@ if uploaded_file is not None:
     if raw_invoice_text:
         st.subheader("3. Structured Invoice Data (API Format)")
         with st.spinner("Structuring data with LLM..."):
-            # Await the async function
-            structured_data = st.session_state.get('structured_data', None)
-            if structured_data is None:
-                structured_data = st.experimental_rerun(extract_invoice_data_with_llm(raw_invoice_text))
-                st.session_state['structured_data'] = structured_data
-
+            # Directly call the synchronous function
+            structured_data = extract_invoice_data_with_llm(raw_invoice_text)
 
         if structured_data:
             json_output = json.dumps(structured_data, indent=4)
@@ -248,15 +244,7 @@ if uploaded_file is not None:
                     mime="application/json"
                 )
             with col2:
-                # Provide a button to copy to clipboard (requires specific handling in browser)
-                # For actual clipboard functionality in Streamlit, you'd typically need a custom component
-                # This is a fallback to simply display the content to be copied
                 st.info("You can copy the JSON above manually or download it.")
-                # This is a basic way to allow copying. For a real app, a custom component would be better.
-                # However, direct clipboard access from a Streamlit app is restricted by browser security.
-                # The download button is the most reliable "push" mechanism.
-                # A more robust copy button would involve `st.components.v1.html` or a custom component.
-                # For this example, we provide the JSON in a selectable code block.
 
             st.success("Processing Complete! Review the structured data above.")
             st.markdown("""
