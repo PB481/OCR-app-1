@@ -1,6 +1,5 @@
 streamlit
 easyocr
-io
-fitz 
-json
-base64
+opencv-python-headless
+Pillow
+PyMuPDF
