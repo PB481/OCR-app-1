@@ -5,6 +5,7 @@ import io
 import fitz # PyMuPDF for PDF processing
 import json
 import base64
+import requests # Import the requests library for API calls
 
 # --- Firebase/LLM API Configuration ---
 # These variables are expected to be provided by the environment.
@@ -95,16 +96,16 @@ async def extract_invoice_data_with_llm(raw_text):
     Invoice Text:
     {raw_text}
     """
-    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+    chatHistory.append({"role": "user", "parts": [{"text": prompt}]}) # Corrected .push to .append
 
     # Define the structured response schema
     payload = {
-        contents: chatHistory,
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: "OBJECT",
-                properties: {
+        "contents": chatHistory,
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": {
+                "type": "OBJECT",
+                "properties": {
                     "invoice_number": { "type": "STRING", "description": "The unique identifier for the invoice." },
                     "invoice_date": { "type": "STRING", "description": "The date the invoice was issued (e.g.,YYYY-MM-DD or MM/DD/YYYY)." },
                     "due_date": { "type": "STRING", "description": "The date payment is due (e.g.,YYYY-MM-DD or MM/DD/YYYY)." },
@@ -140,36 +141,41 @@ async def extract_invoice_data_with_llm(raw_text):
                 ]
             }
         }
-    };
+    }
 
-    try {
-        const apiKey = ""; # Leave as empty string for Canvas environment
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const result = await response.json();
+    try: # Corrected from 'try {'
+        apiKey = "" # Leave as empty string for Canvas environment
+        apiUrl = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={apiKey}"
+        
+        headers = { 'Content-Type': 'application/json' }
+        response = requests.post(apiUrl, headers=headers, json=payload) # Corrected from await fetch
+        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+        result = response.json()
 
-        if (result.candidates && result.candidates.length > 0 and
-            result.candidates[0].content && result.candidates[0].content.parts &&
-            result.candidates[0].content.parts.length > 0) {
-            const json_string = result.candidates[0].content.parts[0].text;
+        if result and result.get("candidates") and len(result["candidates"]) > 0 and \
+           result["candidates"][0].get("content") and result["candidates"][0]["content"].get("parts") and \
+           len(result["candidates"][0]["content"]["parts"]) > 0:
+            json_string = result["candidates"][0]["content"]["parts"][0].get("text")
             # LLM may return markdown code block, so try to parse that
-            if json_string.strip().startswith('```json') and json_string.strip().endswith('```'):
+            if json_string and json_string.strip().startswith('```json') and json_string.strip().endswith('```'):
                 parsed_json = json.loads(json_string.strip()[7:-3])
             else:
                 parsed_json = json.loads(json_string)
             st.success("Invoice data successfully extracted and structured!")
             return parsed_json
-        } else {
+        else:
             st.error("LLM did not return a valid response for structured data.");
             print(f"LLM Response: {result}"); # For debugging
             return None
-        }
-    } catch (e) {
+    except requests.exceptions.RequestException as e: # Catch requests-specific exceptions
         st.error(f"Error calling LLM for structured data: {e}");
+        return None
+    except json.JSONDecodeError as e: # Catch JSON parsing errors
+        st.error(f"Error parsing LLM response JSON: {e}");
+        print(f"Raw LLM response text that caused error: {json_string}");
+        return None
+    except Exception as e: # Catch any other unexpected errors
+        st.error(f"An unexpected error occurred during LLM call: {e}");
         return None
 
 # --- Streamlit UI ---
@@ -222,7 +228,12 @@ if uploaded_file is not None:
     if raw_invoice_text:
         st.subheader("3. Structured Invoice Data (API Format)")
         with st.spinner("Structuring data with LLM..."):
-            structured_data = await extract_invoice_data_with_llm(raw_invoice_text)
+            # Await the async function
+            structured_data = st.session_state.get('structured_data', None)
+            if structured_data is None:
+                structured_data = st.experimental_rerun(extract_invoice_data_with_llm(raw_invoice_text))
+                st.session_state['structured_data'] = structured_data
+
 
         if structured_data:
             json_output = json.dumps(structured_data, indent=4)
