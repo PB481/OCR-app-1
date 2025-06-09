@@ -8,10 +8,22 @@ import base64
 
 # --- Firebase/LLM API Configuration ---
 # These variables are expected to be provided by the environment.
-# DO NOT modify them or try to hardcode API keys.
-appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
+# We use try-except to gracefully handle cases where they might not be defined
+# in a non-Canvas environment, though they are mandatory in Canvas.
+try:
+    appId = __app_id
+except NameError:
+    appId = 'default-app-id'
+
+try:
+    firebaseConfig = json.loads(__firebase_config)
+except NameError:
+    firebaseConfig = {}
+
+try:
+    initialAuthToken = __initial_auth_token
+except NameError:
+    initialAuthToken = ''
 
 # --- Initialize EasyOCR Reader (run once) ---
 @st.cache_resource
@@ -94,8 +106,8 @@ async def extract_invoice_data_with_llm(raw_text):
                 type: "OBJECT",
                 properties: {
                     "invoice_number": { "type": "STRING", "description": "The unique identifier for the invoice." },
-                    "invoice_date": { "type": "STRING", "description": "The date the invoice was issued (e.g., YYYY-MM-DD or MM/DD/YYYY)." },
-                    "due_date": { "type": "STRING", "description": "The date payment is due (e.g., YYYY-MM-DD or MM/DD/YYYY)." },
+                    "invoice_date": { "type": "STRING", "description": "The date the invoice was issued (e.g.,YYYY-MM-DD or MM/DD/YYYY)." },
+                    "due_date": { "type": "STRING", "description": "The date payment is due (e.g.,YYYY-MM-DD or MM/DD/YYYY)." },
                     "vendor_name": { "type": "STRING", "description": "The name of the company or person issuing the invoice." },
                     "vendor_address": { "type": "STRING", "description": "The full address of the vendor." },
                     "customer_name": { "type": "STRING", "description": "The name of the customer the invoice is addressed to." },
