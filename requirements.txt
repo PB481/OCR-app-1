@@ -1,1 +1,6 @@
 streamlit
+easyocr
+io
+fitz 
+json
+base64
