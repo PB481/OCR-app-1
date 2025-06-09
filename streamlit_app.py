@@ -144,7 +144,7 @@ def extract_invoice_data_with_llm(raw_text): # Removed 'async' keyword
     }
 
     try:
-        apiKey = "AIzaSyAhjsT67dgPhkHCj9GFi50tAVtEfrvKleQ" 
+        apiKey = "" 
         apiUrl = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={apiKey}"
         
         # --- Debugging API Key ---
