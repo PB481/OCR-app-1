@@ -147,6 +147,10 @@ def extract_invoice_data_with_llm(raw_text): # Removed 'async' keyword
         apiKey = "" # Leave as empty string for Canvas environment
         apiUrl = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={apiKey}"
         
+        # --- Debugging API Key ---
+        st.info(f"Debug: API Key (first 5 chars): {apiKey[:5] if apiKey else 'None'}")
+        # --- End Debugging ---
+
         headers = { 'Content-Type': 'application/json' }
         response = requests.post(apiUrl, headers=headers, json=payload)
         response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
