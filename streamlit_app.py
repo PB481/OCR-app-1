@@ -64,107 +64,255 @@ def get_category_color(category):
     }
     return color_map.get(category, '#B0B0B0')
 
-def create_workstream_periodic_table():
-    """Create a periodic table style visualization of workstreams using Plotly"""
+def create_workstream_matrix_view():
+    """Create a strategic matrix view of workstreams"""
     df = pd.DataFrame(st.session_state.workstream_data)
     
-    # Create grid positions based on category and complexity
-    category_rows = {
-        'NAV Calculation': 7,
-        'Portfolio Valuation': 6, 
-        'Trade Capture': 5,
-        'Reconciliation': 4,
-        'Corporate Actions': 3,
-        'Expense Management': 2,
-        'Reporting': 1
-    }
-    
-    # Prepare data for plotting
-    x_positions = []
-    y_positions = []
-    colors = []
-    sizes = []
-    text_labels = []
-    hover_texts = []
-    
-    for _, row in df.iterrows():
-        y_pos = category_rows.get(row['category'], 1)
-        x_pos = int(row['complexity'])
-        
-        x_positions.append(x_pos)
-        y_positions.append(y_pos)
-        colors.append(get_category_color(row['category']))
-        
-        # Size based on investment amount
-        sizes.append(max(20, min(80, row['investment'] * 15)))
-        
-        # Text labels for elements
-        text_labels.append(f"<b>{row['name'][:15]}{'...' if len(row['name']) > 15 else ''}</b><br>Auto: {row['automation']}/10<br>{row['completion']}%")
-        
-        # Hover text with full details
-        priority_symbol = {'High': '🔴', 'Medium': '🟡', 'Low': '🟢'}.get(row['priority'], '⚪')
-        hover_texts.append(f"""<b>{row['name']}</b><br>
-Category: {row['category']}<br>
-Complexity: {row['complexity']}/10<br>
-Automation: {row['automation']}/10<br>
-Risk: {row['risk']}/10<br>
-Investment: ${row['investment']:.1f}M<br>
-Completion: {row['completion']}%<br>
-Priority: {priority_symbol} {row['priority']}<br><br>
-{row['description'][:100]}{'...' if len(row['description']) > 100 else ''}""")
-    
-    # Create the scatter plot
     fig = go.Figure()
     
-    # Add workstream elements
-    fig.add_trace(go.Scatter(
-        x=x_positions,
-        y=y_positions,
-        mode='markers+text',
-        marker=dict(
-            size=sizes,
-            color=colors,
-            line=dict(width=3, color='white'),
-            opacity=0.8
-        ),
-        text=text_labels,
-        textposition="middle center",
-        textfont=dict(size=10, color='white'),
-        hovertemplate='%{customdata}<extra></extra>',
-        customdata=hover_texts,
-        showlegend=False
-    ))
+    # Create bubble chart: Risk vs Automation with size = Investment
+    for category in df['category'].unique():
+        category_data = df[df['category'] == category]
+        
+        fig.add_trace(go.Scatter(
+            x=category_data['automation'],
+            y=category_data['risk'],
+            mode='markers+text',
+            marker=dict(
+                size=category_data['investment'] * 12,
+                color=get_category_color(category),
+                line=dict(width=2, color='white'),
+                opacity=0.7
+            ),
+            text=[f"<b>{name[:12]}{'...' if len(name) > 12 else ''}</b>" for name in category_data['name']],
+            textposition="middle center",
+            textfont=dict(size=9, color='white'),
+            name=category,
+            hovertemplate='<b>%{customdata[0]}</b><br>' +
+                         'Automation: %{x}/10<br>' +
+                         'Risk: %{y}/10<br>' +
+                         'Investment: $%{customdata[1]:.1f}M<br>' +
+                         'Completion: %{customdata[2]}%<br>' +
+                         'Priority: %{customdata[3]}<br>' +
+                         '<extra></extra>',
+            customdata=list(zip(category_data['name'], category_data['investment'], 
+                               category_data['completion'], category_data['priority']))
+        ))
     
-    # Customize layout to look like periodic table
+    # Add quadrant lines
+    fig.add_hline(y=5, line_dash="dash", line_color="gray", opacity=0.5)
+    fig.add_vline(x=5, line_dash="dash", line_color="gray", opacity=0.5)
+    
+    # Add quadrant labels
+    fig.add_annotation(x=2.5, y=8.5, text="<b>High Risk<br>Low Auto</b><br>🚨 Critical", 
+                      showarrow=False, bgcolor="rgba(255,0,0,0.1)", bordercolor="red")
+    fig.add_annotation(x=7.5, y=8.5, text="<b>High Risk<br>High Auto</b><br>⚡ Monitor", 
+                      showarrow=False, bgcolor="rgba(255,165,0,0.1)", bordercolor="orange")
+    fig.add_annotation(x=2.5, y=2.5, text="<b>Low Risk<br>Low Auto</b><br>🔧 Enhance", 
+                      showarrow=False, bgcolor="rgba(255,255,0,0.1)", bordercolor="gold")
+    fig.add_annotation(x=7.5, y=2.5, text="<b>Low Risk<br>High Auto</b><br>✅ Stable", 
+                      showarrow=False, bgcolor="rgba(0,255,0,0.1)", bordercolor="green")
+    
     fig.update_layout(
-        title="Fund Administration Workstreams - Periodic Table Layout",
-        title_x=0.5,
-        xaxis=dict(
-            title="Complexity Level →",
-            range=[0.5, 10.5],
-            tickmode='linear',
-            tick0=1,
-            dtick=1,
-            showgrid=True,
-            gridcolor='lightgray',
-            gridwidth=1
-        ),
-        yaxis=dict(
-            title="Categories",
-            range=[0.5, 7.5],
-            tickmode='array',
-            tickvals=[1, 2, 3, 4, 5, 6, 7],
-            ticktext=['Reporting', 'Expense Mgmt', 'Corp Actions', 'Reconciliation', 'Trade Capture', 'Portfolio Val', 'NAV Calc'],
-            showgrid=True,
-            gridcolor='lightgray',
-            gridwidth=1
-        ),
-        plot_bgcolor='rgba(240, 248, 255, 0.8)',
-        paper_bgcolor='white',
+        title="Workstream Strategic Matrix - Risk vs Automation",
+        xaxis_title="Automation Level (1-10)",
+        yaxis_title="Risk Level (1-10)",
         width=900,
         height=600,
-        margin=dict(l=100, r=50, t=80, b=80)
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
+    
+    return fig
+
+def create_workstream_timeline():
+    """Create a timeline/roadmap view of workstreams"""
+    df = pd.DataFrame(st.session_state.workstream_data)
+    
+    # Calculate estimated completion dates based on current completion
+    current_date = pd.Timestamp.now()
+    df['days_remaining'] = ((100 - df['completion']) * 2)  # Rough estimate: 2 days per %
+    df['target_date'] = current_date + pd.to_timedelta(df['days_remaining'], unit='D')
+    
+    fig = go.Figure()
+    
+    # Sort by target date
+    df_sorted = df.sort_values('target_date')
+    
+    for i, (_, row) in enumerate(df_sorted.iterrows()):
+        # Progress bar for each workstream
+        fig.add_trace(go.Scatter(
+            x=[current_date, row['target_date']],
+            y=[i, i],
+            mode='lines',
+            line=dict(color='lightgray', width=20),
+            showlegend=False,
+            hoverinfo='skip'
+        ))
+        
+        # Completed portion
+        completed_date = current_date + pd.Timedelta(days=int(row['days_remaining'] * (row['completion']/100)))
+        fig.add_trace(go.Scatter(
+            x=[current_date, completed_date],
+            y=[i, i],
+            mode='lines',
+            line=dict(color=get_category_color(row['category']), width=20),
+            showlegend=False,
+            hovertemplate=f"<b>{row['name']}</b><br>" +
+                         f"Category: {row['category']}<br>" +
+                         f"Completion: {row['completion']}%<br>" +
+                         f"Investment: ${row['investment']:.1f}M<br>" +
+                         f"Priority: {row['priority']}<br>" +
+                         f"Target: {row['target_date'].strftime('%Y-%m-%d')}<extra></extra>"
+        ))
+        
+        # Priority indicator
+        priority_color = {'High': 'red', 'Medium': 'orange', 'Low': 'green'}[row['priority']]
+        fig.add_trace(go.Scatter(
+            x=[row['target_date']],
+            y=[i],
+            mode='markers',
+            marker=dict(
+                size=15,
+                color=priority_color,
+                symbol='diamond',
+                line=dict(width=2, color='white')
+            ),
+            showlegend=False,
+            hoverinfo='skip'
+        ))
+    
+    fig.update_layout(
+        title="Workstream Completion Timeline & Roadmap",
+        xaxis_title="Timeline",
+        yaxis=dict(
+            tickmode='array',
+            tickvals=list(range(len(df_sorted))),
+            ticktext=[f"{name[:25]}{'...' if len(name) > 25 else ''}" for name in df_sorted['name']],
+            tickfont=dict(size=10)
+        ),
+        width=1000,
+        height=max(400, len(df_sorted) * 40),
+        margin=dict(l=200, r=50, t=80, b=80)
+    )
+    
+    return fig
+
+def create_workstream_hierarchy():
+    """Create a hierarchical/tree view of workstreams by category"""
+    df = pd.DataFrame(st.session_state.workstream_data)
+    
+    fig = go.Figure()
+    
+    # Create sunburst chart
+    categories = []
+    workstreams = []
+    parents = []
+    values = []
+    colors = []
+    
+    # Add categories
+    for category in df['category'].unique():
+        categories.append(category)
+        parents.append("")
+        values.append(df[df['category'] == category]['investment'].sum())
+        colors.append(get_category_color(category))
+    
+    # Add workstreams
+    for _, row in df.iterrows():
+        workstreams.append(f"{row['name'][:20]}{'...' if len(row['name']) > 20 else ''}")
+        parents.append(row['category'])
+        values.append(row['investment'])
+        colors.append(get_category_color(row['category']))
+    
+    all_labels = categories + workstreams
+    all_parents = parents
+    all_values = values
+    
+    fig = go.Figure(go.Sunburst(
+        labels=all_labels,
+        parents=all_parents,
+        values=all_values,
+        branchvalues="total",
+        hovertemplate='<b>%{label}</b><br>Investment: $%{value:.1f}M<br><extra></extra>',
+        maxdepth=2,
+    ))
+    
+    fig.update_layout(
+        title="Workstream Hierarchy - Investment Distribution",
+        width=700,
+        height=700
+    )
+    
+    return fig
+
+def create_workstream_dashboard():
+    """Create a comprehensive dashboard view"""
+    df = pd.DataFrame(st.session_state.workstream_data)
+    
+    # Create subplots
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=('Investment by Category', 'Completion Progress', 'Risk vs Complexity', 'Priority Distribution'),
+        specs=[[{"type": "bar"}, {"type": "bar"}],
+               [{"type": "scatter"}, {"type": "pie"}]]
+    )
+    
+    # 1. Investment by Category (Bar Chart)
+    category_investment = df.groupby('category')['investment'].sum().sort_values(ascending=True)
+    fig.add_trace(
+        go.Bar(x=category_investment.values, y=category_investment.index, orientation='h',
+               marker_color=[get_category_color(cat) for cat in category_investment.index],
+               name="Investment"),
+        row=1, col=1
+    )
+    
+    # 2. Completion Progress (Bar Chart)
+    completion_avg = df.groupby('category')['completion'].mean().sort_values(ascending=True)
+    fig.add_trace(
+        go.Bar(x=completion_avg.values, y=completion_avg.index, orientation='h',
+               marker_color=[get_category_color(cat) for cat in completion_avg.index],
+               name="Completion"),
+        row=1, col=2
+    )
+    
+    # 3. Risk vs Complexity Scatter
+    fig.add_trace(
+        go.Scatter(x=df['complexity'], y=df['risk'],
+                   mode='markers',
+                   marker=dict(
+                       size=df['investment']*8,
+                       color=[get_category_color(cat) for cat in df['category']],
+                       opacity=0.7,
+                       line=dict(width=1, color='white')
+                   ),
+                   text=df['name'],
+                   name="Workstreams"),
+        row=2, col=1
+    )
+    
+    # 4. Priority Distribution (Pie Chart)
+    priority_counts = df['priority'].value_counts()
+    priority_colors = {'High': '#FF4444', 'Medium': '#FFA500', 'Low': '#44AA44'}
+    fig.add_trace(
+        go.Pie(labels=priority_counts.index, values=priority_counts.values,
+               marker_colors=[priority_colors[p] for p in priority_counts.index],
+               name="Priority"),
+        row=2, col=2
+    )
+    
+    fig.update_layout(
+        title_text="Workstream Analytics Dashboard",
+        showlegend=False,
+        height=800,
+        width=1200
+    )
+    
+    # Update axes labels
+    fig.update_xaxes(title_text="Investment ($M)", row=1, col=1)
+    fig.update_xaxes(title_text="Completion (%)", row=1, col=2)
+    fig.update_xaxes(title_text="Complexity", row=2, col=1)
+    fig.update_yaxes(title_text="Risk", row=2, col=1)
     
     return fig
 
@@ -367,30 +515,128 @@ main_tab1, main_tab2, main_tab3 = st.tabs([
 ])
 
 with main_tab1:
-    st.markdown("### Fund Administration Workstreams - Periodic Table Layout")
-    st.markdown("*Interactive visualization showing workstreams positioned by complexity and category. Hover over elements for detailed information.*")
+    st.markdown("### 🎯 Workstream Visualization Hub")
+    st.markdown("*Choose from multiple professional visualization options to analyze your fund administration workstreams.*")
     
-    # Display the periodic table using Plotly
-    periodic_table_fig = create_workstream_periodic_table()
-    st.plotly_chart(periodic_table_fig, use_container_width=True)
+    # Visualization selector
+    viz_option = st.selectbox(
+        "Select Visualization Type:",
+        ["🎯 Strategic Matrix", "📊 Analytics Dashboard", "📅 Timeline Roadmap", "🌞 Hierarchy View"],
+        key="viz_selector"
+    )
     
-    # Display legend and guide
-    legend_info = create_legend_info()
-    st.markdown(legend_info)
+    if viz_option == "🎯 Strategic Matrix":
+        st.markdown("""
+        **Strategic Risk vs Automation Matrix**
+        - **Quadrant Analysis**: Identify workstreams by risk/automation levels
+        - **Investment Sizing**: Bubble size shows investment amount
+        - **Category Grouping**: Colors represent different workstream categories
+        - **Strategic Insights**: Clear quadrants show priority actions needed
+        """)
+        
+        fig = create_workstream_matrix_view()
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Strategic insights
+        df = pd.DataFrame(st.session_state.workstream_data)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 🚨 Critical Attention Needed")
+            critical = df[(df['risk'] > 5) & (df['automation'] < 5)]
+            for _, row in critical.iterrows():
+                st.warning(f"**{row['name']}** - Risk: {row['risk']}/10, Auto: {row['automation']}/10")
+        
+        with col2:
+            st.markdown("#### ✅ Well Performing")
+            stable = df[(df['risk'] <= 5) & (df['automation'] >= 7)]
+            for _, row in stable.iterrows():
+                st.success(f"**{row['name']}** - Risk: {row['risk']}/10, Auto: {row['automation']}/10")
     
-    # Category color guide
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown("🔴 **NAV Calculation**")
-        st.markdown("🟦 **Portfolio Valuation**")
-    with col2:
-        st.markdown("🔵 **Trade Capture**")
-        st.markdown("🟢 **Reconciliation**")
-    with col3:
-        st.markdown("🟡 **Corporate Actions**")
-        st.markdown("🟣 **Expense Management**")
-    with col4:
-        st.markdown("🟫 **Reporting**")
+    elif viz_option == "📊 Analytics Dashboard":
+        st.markdown("""
+        **Comprehensive Analytics Dashboard**
+        - **Investment Analysis**: See where money is allocated across categories
+        - **Progress Tracking**: Monitor completion rates by category
+        - **Risk Assessment**: Understand complexity vs risk relationships
+        - **Priority Overview**: Visual breakdown of priority distribution
+        """)
+        
+        fig = create_workstream_dashboard()
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Key metrics summary
+        df = pd.DataFrame(st.session_state.workstream_data)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Investment", f"${df['investment'].sum():.1f}M")
+        with col2:
+            st.metric("Avg Completion", f"{df['completion'].mean():.1f}%")
+        with col3:
+            st.metric("High Risk Items", len(df[df['risk'] >= 7]))
+        with col4:
+            st.metric("Low Automation", len(df[df['automation'] <= 4]))
+    
+    elif viz_option == "📅 Timeline Roadmap":
+        st.markdown("""
+        **Project Timeline & Completion Roadmap**
+        - **Progress Bars**: Visual completion status for each workstream
+        - **Target Dates**: Estimated completion dates based on current progress
+        - **Priority Indicators**: Diamond markers show priority levels
+        - **Category Colors**: Easy identification of workstream types
+        """)
+        
+        fig = create_workstream_timeline()
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Timeline insights
+        df = pd.DataFrame(st.session_state.workstream_data)
+        current_date = pd.Timestamp.now()
+        df['days_remaining'] = ((100 - df['completion']) * 2)
+        df['target_date'] = current_date + pd.to_timedelta(df['days_remaining'], unit='D')
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### ⏰ Upcoming Completions (Next 30 Days)")
+            upcoming = df[df['days_remaining'] <= 30].sort_values('days_remaining')
+            for _, row in upcoming.iterrows():
+                days_left = int(row['days_remaining'])
+                st.info(f"**{row['name']}** - {days_left} days remaining")
+        
+        with col2:
+            st.markdown("#### 🐌 Longest Timeline")
+            longest = df.nlargest(3, 'days_remaining')
+            for _, row in longest.iterrows():
+                days_left = int(row['days_remaining'])
+                st.warning(f"**{row['name']}** - {days_left} days remaining")
+    
+    elif viz_option == "🌞 Hierarchy View":
+        st.markdown("""
+        **Investment Hierarchy & Distribution**
+        - **Sunburst Design**: Hierarchical view of categories and workstreams
+        - **Investment Sizing**: Segment size represents investment amount
+        - **Category Grouping**: Inner ring shows categories, outer ring shows workstreams
+        - **Interactive**: Click to drill down into specific categories
+        """)
+        
+        fig = create_workstream_hierarchy()
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Investment breakdown
+        df = pd.DataFrame(st.session_state.workstream_data)
+        
+        st.markdown("#### 💰 Investment Breakdown by Category")
+        
+        investment_summary = df.groupby('category').agg({
+            'investment': 'sum',
+            'name': 'count',
+            'completion': 'mean'
+        }).round(2)
+        investment_summary.columns = ['Total Investment ($M)', 'Number of Workstreams', 'Avg Completion (%)']
+        investment_summary = investment_summary.sort_values('Total Investment ($M)', ascending=False)
+        
+        st.dataframe(investment_summary, use_container_width=True)
     
     # Summary metrics
     df = pd.DataFrame(st.session_state.workstream_data)
