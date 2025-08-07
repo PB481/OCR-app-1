@@ -1430,11 +1430,12 @@ This application provides a comprehensive view of fund administration operationa
 """)
 
 # Create tabs for different sections
-main_tab1, main_tab2, main_tab3, main_tab4 = st.tabs([
+main_tab1, main_tab2, main_tab3, main_tab4, main_tab5 = st.tabs([
     "🧪 Workstream Views",
     "📊 3D Analysis", 
     "⚙️ Manage Workstreams",
-    "💰 Capital Projects"
+    "💰 Capital Projects",
+    "📄 Source Code"
 ])
 
 with main_tab1:
@@ -1947,6 +1948,107 @@ with main_tab4:
                 dl2.download_button("⬇️ Download Report as Excel", excel_report_content, "capital_project_report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
         st.info("Upload your Capital Project CSV or Excel file to get started!")
+
+with main_tab5:
+    st.markdown("### 📄 Application Source Code")
+    st.markdown("*View the complete source code of this Streamlit application.*")
+    
+    st.markdown("---")
+    with st.expander("View Application Source Code", expanded=False):
+        try:
+            # Read the current file's source code
+            with open(__file__, 'r', encoding='utf-8') as file:
+                source_code = file.read()
+            st.code(source_code, language='python')
+        except Exception as e:
+            st.error(f"Error reading source code: {e}")
+            # Fallback using inspect
+            try:
+                import inspect
+                source_code = inspect.getsource(inspect.getmodule(inspect.currentframe()))
+                st.code(source_code, language='python')
+            except Exception as e2:
+                st.error(f"Fallback method also failed: {e2}")
+    
+    # Additional information about the application
+    st.markdown("---")
+    st.markdown("### 📊 Application Statistics")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        try:
+            with open(__file__, 'r', encoding='utf-8') as file:
+                lines = file.readlines()
+            st.metric("Total Lines of Code", len(lines))
+        except:
+            st.metric("Total Lines of Code", "N/A")
+    
+    with col2:
+        try:
+            with open(__file__, 'r', encoding='utf-8') as file:
+                content = file.read()
+            function_count = content.count('def ')
+            st.metric("Total Functions", function_count)
+        except:
+            st.metric("Total Functions", "N/A")
+    
+    with col3:
+        try:
+            with open(__file__, 'r', encoding='utf-8') as file:
+                content = file.read()
+            import_count = content.count('import ')
+            st.metric("Import Statements", import_count)
+        except:
+            st.metric("Import Statements", "N/A")
+    
+    st.markdown("---")
+    st.markdown("### 🔧 Technical Dependencies")
+    st.markdown("""
+    **Core Libraries:**
+    - `streamlit` - Web application framework
+    - `pandas` - Data manipulation and analysis
+    - `plotly` - Interactive visualizations and 3D charts
+    - `numpy` - Numerical computing
+    
+    **Standard Libraries:**
+    - `datetime` - Date and time handling
+    - `json` - JSON data processing
+    - `io` - Input/output operations
+    - `re` - Regular expressions
+    - `inspect` - Runtime inspection utilities
+    """)
+    
+    st.markdown("---")
+    st.markdown("### 📋 Application Features")
+    st.markdown("""
+    **🧪 Workstream Views:**
+    - Periodic Table Layout
+    - Strategic Matrix Analysis  
+    - Analytics Dashboard
+    - Timeline Roadmap
+    - Hierarchy Visualization
+    
+    **📊 3D Analysis:**
+    - Enhanced 3D Complexity Analysis
+    - Strategic Priority Mapping
+    - Investment Performance Analysis
+    - Surface Plot Analysis
+    - Network Relationship Analysis
+    
+    **⚙️ Workstream Management:**
+    - Add/Edit/Delete Operations
+    - Excel/CSV Data Upload
+    - Data Export Functionality
+    - Session State Management
+    
+    **💰 Capital Projects:**
+    - Financial Data Processing
+    - Project Portfolio Analysis
+    - Variance Analysis
+    - Professional Report Generation
+    - HTML/Excel Export
+    """)
 
 # Footer
 st.markdown("---")
