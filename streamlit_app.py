@@ -258,22 +258,22 @@ def workstream_management_interface():
         col1, col2 = st.columns(2)
         
         with col1:
-            new_name = st.text_input("Workstream Name")
+            new_name = st.text_input("Workstream Name", key="add_name")
             new_category = st.selectbox("Category", [
                 'NAV Calculation', 'Portfolio Valuation', 'Trade Capture',
                 'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'
-            ])
-            new_complexity = st.slider("Complexity Level", 1, 10, 5)
-            new_automation = st.slider("Automation Level", 1, 10, 5)
-            new_risk = st.slider("Risk Level", 1, 10, 5)
+            ], key="add_category")
+            new_complexity = st.slider("Complexity Level", 1, 10, 5, key="add_complexity")
+            new_automation = st.slider("Automation Level", 1, 10, 5, key="add_automation")
+            new_risk = st.slider("Risk Level", 1, 10, 5, key="add_risk")
         
         with col2:
-            new_investment = st.number_input("Investment ($M)", 0.0, 50.0, 1.0, 0.1)
-            new_completion = st.slider("Completion %", 0, 100, 50)
-            new_priority = st.selectbox("Priority", ['High', 'Medium', 'Low'])
-            new_description = st.text_area("Description")
+            new_investment = st.number_input("Investment ($M)", 0.0, 50.0, 1.0, 0.1, key="add_investment")
+            new_completion = st.slider("Completion %", 0, 100, 50, key="add_completion")
+            new_priority = st.selectbox("Priority", ['High', 'Medium', 'Low'], key="add_priority")
+            new_description = st.text_area("Description", key="add_description")
         
-        if st.button("Add Workstream", type="primary"):
+        if st.button("Add Workstream", type="primary", key="add_workstream_btn"):
             if new_name:
                 new_id = f"custom_{len(st.session_state.workstream_data):03d}"
                 new_workstream = {
@@ -300,7 +300,7 @@ def workstream_management_interface():
         df = pd.DataFrame(st.session_state.workstream_data)
         workstream_names = [f"{row['name']} ({row['category']})" for _, row in df.iterrows()]
         
-        selected_workstream = st.selectbox("Select Workstream to Edit", workstream_names)
+        selected_workstream = st.selectbox("Select Workstream to Edit", workstream_names, key="edit_select_workstream")
         
         if selected_workstream:
             selected_idx = workstream_names.index(selected_workstream)
@@ -309,24 +309,24 @@ def workstream_management_interface():
             col1, col2 = st.columns(2)
             
             with col1:
-                edit_name = st.text_input("Name", value=workstream['name'])
+                edit_name = st.text_input("Name", value=workstream['name'], key="edit_name")
                 edit_category = st.selectbox("Category", [
                     'NAV Calculation', 'Portfolio Valuation', 'Trade Capture',
                     'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'
                 ], index=['NAV Calculation', 'Portfolio Valuation', 'Trade Capture',
-                         'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'].index(workstream['category']))
-                edit_complexity = st.slider("Complexity", 1, 10, workstream['complexity'])
-                edit_automation = st.slider("Automation", 1, 10, workstream['automation'])
-                edit_risk = st.slider("Risk", 1, 10, workstream['risk'])
+                         'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'].index(workstream['category']), key="edit_category")
+                edit_complexity = st.slider("Complexity", 1, 10, workstream['complexity'], key="edit_complexity")
+                edit_automation = st.slider("Automation", 1, 10, workstream['automation'], key="edit_automation")
+                edit_risk = st.slider("Risk", 1, 10, workstream['risk'], key="edit_risk")
             
             with col2:
-                edit_investment = st.number_input("Investment ($M)", 0.0, 50.0, workstream['investment'], 0.1)
-                edit_completion = st.slider("Completion %", 0, 100, workstream['completion'])
+                edit_investment = st.number_input("Investment ($M)", 0.0, 50.0, workstream['investment'], 0.1, key="edit_investment")
+                edit_completion = st.slider("Completion %", 0, 100, workstream['completion'], key="edit_completion")
                 edit_priority = st.selectbox("Priority", ['High', 'Medium', 'Low'], 
-                                           index=['High', 'Medium', 'Low'].index(workstream['priority']))
-                edit_description = st.text_area("Description", value=workstream['description'])
+                                           index=['High', 'Medium', 'Low'].index(workstream['priority']), key="edit_priority")
+                edit_description = st.text_area("Description", value=workstream['description'], key="edit_description")
             
-            if st.button("Update Workstream", type="primary"):
+            if st.button("Update Workstream", type="primary", key="update_workstream_btn"):
                 st.session_state.workstream_data[selected_idx].update({
                     'name': edit_name,
                     'category': edit_category,
@@ -347,7 +347,7 @@ def workstream_management_interface():
         df = pd.DataFrame(st.session_state.workstream_data)
         workstream_names = [f"{row['name']} ({row['category']})" for _, row in df.iterrows()]
         
-        delete_workstream = st.selectbox("Select Workstream to Delete", workstream_names)
+        delete_workstream = st.selectbox("Select Workstream to Delete", workstream_names, key="delete_select_workstream")
         
         if delete_workstream:
             selected_idx = workstream_names.index(delete_workstream)
@@ -358,12 +358,12 @@ def workstream_management_interface():
             
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("🗑️ Confirm Delete", type="secondary"):
+                if st.button("🗑️ Confirm Delete", type="secondary", key="confirm_delete_btn"):
                     del st.session_state.workstream_data[selected_idx]
                     st.success(f"Deleted workstream: {workstream['name']}")
                     st.rerun()
             with col2:
-                if st.button("❌ Cancel"):
+                if st.button("❌ Cancel", key="cancel_delete_btn"):
                     st.info("Delete cancelled")
 
 # Main App Layout
