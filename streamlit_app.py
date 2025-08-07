@@ -710,9 +710,9 @@ def create_3d_network_analysis():
 
 def workstream_management_interface():
     """Create interface for managing workstreams"""
-    st.subheader("🛠️ Manage Workstreams - Add/Edit/Delete")
+    st.subheader("🛠️ Manage Workstreams - Add/Edit/Delete/Load Data")
     
-    tab1, tab2, tab3 = st.tabs(["➕ Add New", "✏️ Edit Existing", "🗑️ Delete"])
+    tab1, tab2, tab3, tab4 = st.tabs(["➕ Add New", "✏️ Edit Existing", "🗑️ Delete", "📂 Load Data"])
     
     with tab1:
         st.markdown("### Add New Workstream")
@@ -827,6 +827,268 @@ def workstream_management_interface():
             with col2:
                 if st.button("❌ Cancel", key="cancel_delete_btn"):
                     st.info("Delete cancelled")
+    
+    with tab4:
+        st.markdown("### 📂 Load Workstream Data from Excel")
+        
+        # Show current data format
+        st.markdown("#### 📋 Required Excel Format")
+        st.info("Your Excel file must contain the following columns with these exact headers:")
+        
+        # Create sample data structure
+        sample_data = pd.DataFrame([
+            {
+                'id': 'nav_001',
+                'name': 'NAV Calculation & Publication',
+                'category': 'NAV Calculation', 
+                'complexity': 8,
+                'automation': 7,
+                'risk': 8,
+                'investment': 4.2,
+                'completion': 80,
+                'priority': 'High',
+                'description': 'Core NAV calculation engine and publication workflow'
+            },
+            {
+                'id': 'val_001',
+                'name': 'Exchange Listed Securities',
+                'category': 'Portfolio Valuation',
+                'complexity': 5,
+                'automation': 8,
+                'risk': 3,
+                'investment': 1.5,
+                'completion': 90,
+                'priority': 'Low',
+                'description': 'Automated valuation of exchange-traded securities'
+            }
+        ])
+        
+        st.dataframe(sample_data, use_container_width=True)
+        
+        # Column definitions
+        st.markdown("#### 📖 Column Definitions")
+        
+        col_def1, col_def2 = st.columns(2)
+        
+        with col_def1:
+            st.markdown("""
+            **Required Columns:**
+            - **id**: Unique identifier (text, e.g., 'nav_001')
+            - **name**: Workstream name (text, max 50 characters)
+            - **category**: Must be one of:
+              - NAV Calculation
+              - Portfolio Valuation
+              - Trade Capture
+              - Reconciliation
+              - Corporate Actions
+              - Expense Management
+              - Reporting
+            - **complexity**: Integer from 1-10
+            - **automation**: Integer from 1-10
+            """)
+        
+        with col_def2:
+            st.markdown("""
+            **Required Columns (continued):**
+            - **risk**: Integer from 1-10
+            - **investment**: Decimal number (in millions, e.g., 4.2)
+            - **completion**: Integer from 0-100 (percentage)
+            - **priority**: Must be one of:
+              - High
+              - Medium  
+              - Low
+            - **description**: Text description (max 200 characters)
+            """)
+        
+        # Download template
+        st.markdown("#### 📥 Download Excel Template")
+        template_data = pd.DataFrame([
+            {
+                'id': 'template_001',
+                'name': 'Example Workstream Name',
+                'category': 'NAV Calculation',
+                'complexity': 5,
+                'automation': 5,
+                'risk': 5,
+                'investment': 2.0,
+                'completion': 50,
+                'priority': 'Medium',
+                'description': 'Enter your workstream description here'
+            }
+        ])
+        
+        # Create Excel file in memory
+        from io import BytesIO
+        excel_buffer = BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            template_data.to_excel(writer, sheet_name='Workstreams', index=False)
+        
+        st.download_button(
+            label="📥 Download Excel Template",
+            data=excel_buffer.getvalue(),
+            file_name="workstream_template.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="download_template"
+        )
+        
+        st.markdown("---")
+        
+        # File upload
+        st.markdown("#### 📤 Upload Your Excel File")
+        
+        uploaded_file = st.file_uploader(
+            "Choose an Excel file",
+            type=['xlsx', 'xls'],
+            help="Upload an Excel file with workstream data using the format shown above",
+            key="workstream_upload"
+        )
+        
+        if uploaded_file is not None:
+            try:
+                # Read the Excel file
+                df_uploaded = pd.read_excel(uploaded_file)
+                
+                st.success(f"✅ File uploaded successfully! Found {len(df_uploaded)} rows.")
+                
+                # Display uploaded data preview
+                st.markdown("#### 👀 Data Preview")
+                st.dataframe(df_uploaded.head(), use_container_width=True)
+                
+                # Validate data format
+                st.markdown("#### ✅ Data Validation")
+                
+                required_columns = ['id', 'name', 'category', 'complexity', 'automation', 'risk', 'investment', 'completion', 'priority', 'description']
+                valid_categories = ['NAV Calculation', 'Portfolio Valuation', 'Trade Capture', 'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting']
+                valid_priorities = ['High', 'Medium', 'Low']
+                
+                validation_errors = []
+                
+                # Check required columns
+                missing_columns = [col for col in required_columns if col not in df_uploaded.columns]
+                if missing_columns:
+                    validation_errors.append(f"Missing columns: {', '.join(missing_columns)}")
+                
+                if not validation_errors:  # Only validate data if columns are present
+                    # Validate data types and ranges
+                    for index, row in df_uploaded.iterrows():
+                        row_num = index + 2  # Excel row number (accounting for header)
+                        
+                        # Check category values
+                        if row['category'] not in valid_categories:
+                            validation_errors.append(f"Row {row_num}: Invalid category '{row['category']}'")
+                        
+                        # Check priority values
+                        if row['priority'] not in valid_priorities:
+                            validation_errors.append(f"Row {row_num}: Invalid priority '{row['priority']}'")
+                        
+                        # Check numeric ranges
+                        try:
+                            if not (1 <= int(row['complexity']) <= 10):
+                                validation_errors.append(f"Row {row_num}: Complexity must be 1-10")
+                            if not (1 <= int(row['automation']) <= 10):
+                                validation_errors.append(f"Row {row_num}: Automation must be 1-10")
+                            if not (1 <= int(row['risk']) <= 10):
+                                validation_errors.append(f"Row {row_num}: Risk must be 1-10")
+                            if not (0 <= int(row['completion']) <= 100):
+                                validation_errors.append(f"Row {row_num}: Completion must be 0-100")
+                            if not (0 <= float(row['investment']) <= 50):
+                                validation_errors.append(f"Row {row_num}: Investment must be 0-50")
+                        except (ValueError, TypeError):
+                            validation_errors.append(f"Row {row_num}: Invalid numeric values")
+                        
+                        # Check for required text fields
+                        if pd.isna(row['id']) or str(row['id']).strip() == '':
+                            validation_errors.append(f"Row {row_num}: ID is required")
+                        if pd.isna(row['name']) or str(row['name']).strip() == '':
+                            validation_errors.append(f"Row {row_num}: Name is required")
+                
+                # Display validation results
+                if validation_errors:
+                    st.error("❌ Data validation failed!")
+                    for error in validation_errors[:10]:  # Show first 10 errors
+                        st.error(f"• {error}")
+                    if len(validation_errors) > 10:
+                        st.error(f"... and {len(validation_errors) - 10} more errors")
+                else:
+                    st.success("✅ All data validation checks passed!")
+                    
+                    # Load options
+                    st.markdown("#### 🔄 Load Options")
+                    
+                    col_load1, col_load2 = st.columns(2)
+                    
+                    with col_load1:
+                        load_option = st.radio(
+                            "How would you like to load the data?",
+                            ["Replace all existing data", "Add to existing data"],
+                            key="load_option"
+                        )
+                    
+                    with col_load2:
+                        st.info(f"**Current data**: {len(st.session_state.workstream_data)} workstreams")
+                        st.info(f"**Upload data**: {len(df_uploaded)} workstreams")
+                        if load_option == "Replace all existing data":
+                            st.warning(f"**Result**: {len(df_uploaded)} workstreams (replaces all)")
+                        else:
+                            st.success(f"**Result**: {len(st.session_state.workstream_data) + len(df_uploaded)} workstreams (adds to existing)")
+                    
+                    # Confirmation and load button
+                    st.markdown("---")
+                    if st.button(f"🚀 Confirm and Load Data", type="primary", key="confirm_load"):
+                        try:
+                            # Convert uploaded data to the required format
+                            new_workstream_data = []
+                            
+                            for _, row in df_uploaded.iterrows():
+                                workstream = {
+                                    'id': str(row['id']),
+                                    'name': str(row['name']),
+                                    'category': str(row['category']),
+                                    'complexity': int(row['complexity']),
+                                    'automation': int(row['automation']),
+                                    'risk': int(row['risk']),
+                                    'investment': float(row['investment']),
+                                    'completion': int(row['completion']),
+                                    'priority': str(row['priority']),
+                                    'description': str(row['description'])
+                                }
+                                new_workstream_data.append(workstream)
+                            
+                            # Update session state based on load option
+                            if load_option == "Replace all existing data":
+                                st.session_state.workstream_data = new_workstream_data
+                                st.success(f"✅ Successfully replaced all data! Loaded {len(new_workstream_data)} workstreams.")
+                            else:
+                                # Add to existing data, avoiding duplicates by ID
+                                existing_ids = {ws['id'] for ws in st.session_state.workstream_data}
+                                added_count = 0
+                                updated_count = 0
+                                
+                                for new_ws in new_workstream_data:
+                                    if new_ws['id'] in existing_ids:
+                                        # Update existing workstream
+                                        for i, existing_ws in enumerate(st.session_state.workstream_data):
+                                            if existing_ws['id'] == new_ws['id']:
+                                                st.session_state.workstream_data[i] = new_ws
+                                                updated_count += 1
+                                                break
+                                    else:
+                                        # Add new workstream
+                                        st.session_state.workstream_data.append(new_ws)
+                                        added_count += 1
+                                
+                                st.success(f"✅ Successfully processed data! Added {added_count} new workstreams, updated {updated_count} existing workstreams.")
+                            
+                            # Refresh the app to show updated data
+                            st.info("🔄 Page will refresh to show updated data...")
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error loading data: {str(e)}")
+            
+            except Exception as e:
+                st.error(f"❌ Error reading Excel file: {str(e)}")
+                st.error("Please make sure your file is a valid Excel file (.xlsx or .xls) with the correct format.")
 
 # Main App Layout
 st.title("🏗️ Operational Workstreams - Fund Administration Periodic Table")
