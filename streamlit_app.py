@@ -6,6 +6,9 @@ from plotly.subplots import make_subplots
 import numpy as np
 import json
 from datetime import datetime, timedelta
+import io
+import re
+import inspect
 
 # Page Configuration
 st.set_page_config(
@@ -1100,10 +1103,11 @@ This application provides a comprehensive view of fund administration operationa
 """)
 
 # Create tabs for different sections
-main_tab1, main_tab2, main_tab3 = st.tabs([
-    "🧪 Periodic Table View",
+main_tab1, main_tab2, main_tab3, main_tab4 = st.tabs([
+    "🧪 Workstream Views",
     "📊 3D Analysis", 
-    "⚙️ Manage Workstreams"
+    "⚙️ Manage Workstreams",
+    "💰 Capital Projects"
 ])
 
 with main_tab1:
