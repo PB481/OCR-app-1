@@ -65,143 +65,127 @@ def get_category_color(category):
     return color_map.get(category, '#B0B0B0')
 
 def create_workstream_periodic_table():
-    """Create a periodic table style visualization of workstreams"""
+    """Create a periodic table style visualization of workstreams using Plotly"""
     df = pd.DataFrame(st.session_state.workstream_data)
     
     # Create grid positions based on category and complexity
     category_rows = {
-        'NAV Calculation': 1,
-        'Portfolio Valuation': 2, 
-        'Trade Capture': 3,
+        'NAV Calculation': 7,
+        'Portfolio Valuation': 6, 
+        'Trade Capture': 5,
         'Reconciliation': 4,
-        'Corporate Actions': 5,
-        'Expense Management': 6,
-        'Reporting': 7
+        'Corporate Actions': 3,
+        'Expense Management': 2,
+        'Reporting': 1
     }
     
-    html_elements = []
+    # Prepare data for plotting
+    x_positions = []
+    y_positions = []
+    colors = []
+    sizes = []
+    text_labels = []
+    hover_texts = []
     
     for _, row in df.iterrows():
-        grid_row = category_rows.get(row['category'], 1)
-        grid_col = int(row['complexity']) 
+        y_pos = category_rows.get(row['category'], 1)
+        x_pos = int(row['complexity'])
         
-        color = get_category_color(row['category'])
+        x_positions.append(x_pos)
+        y_positions.append(y_pos)
+        colors.append(get_category_color(row['category']))
         
-        # Risk-based opacity
-        opacity = 0.3 + (row['risk'] / 10) * 0.7
+        # Size based on investment amount
+        sizes.append(max(20, min(80, row['investment'] * 15)))
         
-        # Priority border
-        border_color = {'High': '#FF0000', 'Medium': '#FFA500', 'Low': '#008000'}.get(row['priority'], '#000000')
+        # Text labels for elements
+        text_labels.append(f"<b>{row['name'][:15]}{'...' if len(row['name']) > 15 else ''}</b><br>Auto: {row['automation']}/10<br>{row['completion']}%")
         
-        element_html = f"""
-        <div class="workstream-element" style="
-            grid-row: {grid_row}; 
-            grid-column: {grid_col};
-            background-color: {color};
-            opacity: {opacity};
-            border: 3px solid {border_color};
-            border-radius: 8px;
-            padding: 10px;
-            margin: 2px;
-            text-align: center;
-            position: relative;
-            min-height: 80px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        ">
-            <div style="font-weight: bold; font-size: 12px; color: #333;">
-                {row['name'][:20]}{'...' if len(row['name']) > 20 else ''}
-            </div>
-            <div style="font-size: 10px; color: #666; margin-top: 5px;">
-                Automation: {row['automation']}/10
-            </div>
-            <div style="font-size: 10px; color: #666;">
-                Complete: {row['completion']}%
-            </div>
-            
-            <div class="tooltip" style="
-                visibility: hidden;
-                width: 300px;
-                background-color: #555;
-                color: white;
-                text-align: left;
-                border-radius: 6px;
-                padding: 10px;
-                position: absolute;
-                z-index: 1;
-                bottom: 125%;
-                left: 50%;
-                margin-left: -150px;
-                opacity: 0;
-                transition: opacity 0.3s;
-                font-size: 12px;
-            ">
-                <strong>{row['name']}</strong><br/>
-                Category: {row['category']}<br/>
-                Complexity: {row['complexity']}/10<br/>
-                Automation: {row['automation']}/10<br/>
-                Risk: {row['risk']}/10<br/>
-                Investment: ${row['investment']:.1f}M<br/>
-                Completion: {row['completion']}%<br/>
-                Priority: {row['priority']}<br/><br/>
-                {row['description']}
-            </div>
-        </div>
-        """
-        html_elements.append(element_html)
+        # Hover text with full details
+        priority_symbol = {'High': '🔴', 'Medium': '🟡', 'Low': '🟢'}.get(row['priority'], '⚪')
+        hover_texts.append(f"""<b>{row['name']}</b><br>
+Category: {row['category']}<br>
+Complexity: {row['complexity']}/10<br>
+Automation: {row['automation']}/10<br>
+Risk: {row['risk']}/10<br>
+Investment: ${row['investment']:.1f}M<br>
+Completion: {row['completion']}%<br>
+Priority: {priority_symbol} {row['priority']}<br><br>
+{row['description'][:100]}{'...' if len(row['description']) > 100 else ''}""")
     
-    # Complete HTML with CSS
-    full_html = f"""
-    <style>
-        .periodic-table {{
-            display: grid;
-            grid-template-columns: repeat(10, 1fr);
-            grid-template-rows: repeat(7, 100px);
-            gap: 5px;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 15px;
-            margin: 20px 0;
-        }}
-        
-        .workstream-element:hover .tooltip {{
-            visibility: visible;
-            opacity: 1;
-        }}
-        
-        .workstream-element:hover {{
-            transform: scale(1.05);
-            transition: transform 0.2s;
-            z-index: 10;
-        }}
-    </style>
+    # Create the scatter plot
+    fig = go.Figure()
     
-    <div class="periodic-table">
-        {"".join(html_elements)}
-    </div>
+    # Add workstream elements
+    fig.add_trace(go.Scatter(
+        x=x_positions,
+        y=y_positions,
+        mode='markers+text',
+        marker=dict(
+            size=sizes,
+            color=colors,
+            line=dict(width=3, color='white'),
+            opacity=0.8
+        ),
+        text=text_labels,
+        textposition="middle center",
+        textfont=dict(size=10, color='white'),
+        hovertemplate='%{customdata}<extra></extra>',
+        customdata=hover_texts,
+        showlegend=False
+    ))
     
-    <div style="margin-top: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 10px;">
-        <h4>Legend:</h4>
-        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-            <div><span style="color: #FF0000;">⬛</span> High Priority</div>
-            <div><span style="color: #FFA500;">⬛</span> Medium Priority</div>
-            <div><span style="color: #008000;">⬛</span> Low Priority</div>
-        </div>
-        <br/>
-        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-            <div><span style="background-color: #FF6B6B; padding: 2px 8px; border-radius: 3px;">NAV Calculation</span></div>
-            <div><span style="background-color: #4ECDC4; padding: 2px 8px; border-radius: 3px;">Portfolio Valuation</span></div>
-            <div><span style="background-color: #45B7D1; padding: 2px 8px; border-radius: 3px;">Trade Capture</span></div>
-            <div><span style="background-color: #96CEB4; padding: 2px 8px; border-radius: 3px;">Reconciliation</span></div>
-            <div><span style="background-color: #FFEAA7; padding: 2px 8px; border-radius: 3px;">Corporate Actions</span></div>
-            <div><span style="background-color: #DDA0DD; padding: 2px 8px; border-radius: 3px;">Expense Management</span></div>
-            <div><span style="background-color: #98D8C8; padding: 2px 8px; border-radius: 3px;">Reporting</span></div>
-        </div>
-    </div>
+    # Customize layout to look like periodic table
+    fig.update_layout(
+        title="Fund Administration Workstreams - Periodic Table Layout",
+        title_x=0.5,
+        xaxis=dict(
+            title="Complexity Level →",
+            range=[0.5, 10.5],
+            tickmode='linear',
+            tick0=1,
+            dtick=1,
+            showgrid=True,
+            gridcolor='lightgray',
+            gridwidth=1
+        ),
+        yaxis=dict(
+            title="Categories",
+            range=[0.5, 7.5],
+            tickmode='array',
+            tickvals=[1, 2, 3, 4, 5, 6, 7],
+            ticktext=['Reporting', 'Expense Mgmt', 'Corp Actions', 'Reconciliation', 'Trade Capture', 'Portfolio Val', 'NAV Calc'],
+            showgrid=True,
+            gridcolor='lightgray',
+            gridwidth=1
+        ),
+        plot_bgcolor='rgba(240, 248, 255, 0.8)',
+        paper_bgcolor='white',
+        width=900,
+        height=600,
+        margin=dict(l=100, r=50, t=80, b=80)
+    )
+    
+    return fig
+
+def create_legend_info():
+    """Create legend information as a separate component"""
+    return """
+    ### 📖 Legend & Guide:
+    
+    **Priority Levels:**
+    - 🔴 **High Priority**: Critical workstreams requiring immediate attention
+    - 🟡 **Medium Priority**: Important workstreams with moderate urgency  
+    - 🟢 **Low Priority**: Stable workstreams with lower risk/complexity
+    
+    **Element Information:**
+    - **Position**: X-axis shows complexity level (1-10), Y-axis shows category
+    - **Size**: Marker size represents investment amount (larger = more investment)
+    - **Color**: Each category has a distinct color for easy identification
+    - **Hover**: Hover over any element for detailed information
+    
+    **Categories:**
     """
-    
-    return full_html
 
 def create_3d_analysis():
     """Create 3D analysis visualization"""
@@ -384,11 +368,29 @@ main_tab1, main_tab2, main_tab3 = st.tabs([
 
 with main_tab1:
     st.markdown("### Fund Administration Workstreams - Periodic Table Layout")
-    st.markdown("*Hover over elements to see detailed information. Border colors indicate priority levels.*")
+    st.markdown("*Interactive visualization showing workstreams positioned by complexity and category. Hover over elements for detailed information.*")
     
-    # Display the periodic table
-    periodic_table_html = create_workstream_periodic_table()
-    st.markdown(periodic_table_html, unsafe_allow_html=True)
+    # Display the periodic table using Plotly
+    periodic_table_fig = create_workstream_periodic_table()
+    st.plotly_chart(periodic_table_fig, use_container_width=True)
+    
+    # Display legend and guide
+    legend_info = create_legend_info()
+    st.markdown(legend_info)
+    
+    # Category color guide
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown("🔴 **NAV Calculation**")
+        st.markdown("🟦 **Portfolio Valuation**")
+    with col2:
+        st.markdown("🔵 **Trade Capture**")
+        st.markdown("🟢 **Reconciliation**")
+    with col3:
+        st.markdown("🟡 **Corporate Actions**")
+        st.markdown("🟣 **Expense Management**")
+    with col4:
+        st.markdown("🟫 **Reporting**")
     
     # Summary metrics
     df = pd.DataFrame(st.session_state.workstream_data)
