@@ -482,22 +482,26 @@ def create_3d_roi_analysis():
     fig = go.Figure()
     
     # Create surface plot for ROI landscape
-    investment_range = np.linspace(df['investment'].min(), df['investment'].max(), 20)
-    completion_range = np.linspace(df['completion'].min(), df['completion'].max(), 20)
-    
-    Investment, Completion = np.meshgrid(investment_range, completion_range)
-    ROI_surface = Investment * (Completion/100) * 2  # Simplified ROI calculation for surface
-    
-    fig.add_trace(go.Surface(
-        x=investment_range,
-        y=completion_range,
-        z=ROI_surface,
-        opacity=0.3,
-        colorscale='Viridis',
-        showscale=False,
-        name='ROI Landscape',
-        hoverinfo='skip'
-    ))
+    try:
+        investment_range = np.linspace(df['investment'].min(), df['investment'].max(), 20)
+        completion_range = np.linspace(df['completion'].min(), df['completion'].max(), 20)
+        
+        Investment, Completion = np.meshgrid(investment_range, completion_range)
+        ROI_surface = Investment * (Completion/100) * 2  # Simplified ROI calculation for surface
+        
+        fig.add_trace(go.Surface(
+            x=investment_range,
+            y=completion_range,
+            z=ROI_surface,
+            opacity=0.3,
+            colorscale='Viridis',
+            showscale=False,
+            name='ROI Landscape',
+            hoverinfo='skip'
+        ))
+    except Exception as e:
+        # Skip surface if there's an issue, just show scatter points
+        pass
     
     # Add actual workstreams
     for priority in ['High', 'Medium', 'Low']:
@@ -657,7 +661,8 @@ def create_3d_network_analysis():
                     y=[y1, y2],
                     z=[z1, z2],
                     mode='lines',
-                    line=dict(color=get_category_color(cat), width=4, opacity=0.5),
+                    line=dict(color=get_category_color(cat), width=4),
+                    opacity=0.5,
                     showlegend=False,
                     hoverinfo='skip'
                 ))
