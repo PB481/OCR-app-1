@@ -335,45 +335,370 @@ def create_legend_info():
     **Categories:**
     """
 
-def create_3d_analysis():
-    """Create 3D analysis visualization"""
+def create_3d_complexity_automation_risk():
+    """Enhanced 3D: Complexity vs Automation vs Risk"""
     df = pd.DataFrame(st.session_state.workstream_data)
     
-    # Create 3D scatter plot
-    fig = go.Figure(data=go.Scatter3d(
-        x=df['complexity'],
-        y=df['automation'],
-        z=df['risk'],
-        mode='markers+text',
-        marker=dict(
-            size=df['investment'] * 3,
-            color=[get_category_color(cat) for cat in df['category']],
-            opacity=0.8,
-            line=dict(width=2, color='DarkSlateGray')
-        ),
-        text=df['name'],
-        textposition="top center",
-        hovertemplate='<b>%{text}</b><br>' +
-                      'Complexity: %{x}<br>' +
-                      'Automation: %{y}<br>' +
-                      'Risk: %{z}<br>' +
-                      'Investment: $%{marker.size:.1f}M<br>' +
-                      '<extra></extra>'
+    fig = go.Figure()
+    
+    # Add workstreams by priority level
+    for priority in ['High', 'Medium', 'Low']:
+        priority_data = df[df['priority'] == priority]
+        if len(priority_data) > 0:
+            priority_colors = {'High': 'red', 'Medium': 'orange', 'Low': 'green'}
+            priority_symbols = {'High': 'diamond', 'Medium': 'circle', 'Low': 'square'}
+            
+            fig.add_trace(go.Scatter3d(
+                x=priority_data['complexity'],
+                y=priority_data['automation'],
+                z=priority_data['risk'],
+                mode='markers+text',
+                marker=dict(
+                    size=priority_data['investment'] * 4,
+                    color=priority_colors[priority],
+                    symbol=priority_symbols[priority],
+                    opacity=0.8,
+                    line=dict(width=2, color='white')
+                ),
+                text=[name[:10] + '...' if len(name) > 10 else name for name in priority_data['name']],
+                textposition="top center",
+                name=f"{priority} Priority",
+                hovertemplate='<b>%{customdata[0]}</b><br>' +
+                             'Complexity: %{x}/10<br>' +
+                             'Automation: %{y}/10<br>' +
+                             'Risk: %{z}/10<br>' +
+                             'Investment: $%{customdata[1]:.1f}M<br>' +
+                             'Completion: %{customdata[2]}%<br>' +
+                             'Category: %{customdata[3]}<br>' +
+                             '<extra></extra>',
+                customdata=list(zip(priority_data['name'], priority_data['investment'], 
+                                  priority_data['completion'], priority_data['category']))
+            ))
+    
+    # Add reference planes
+    x_range = [1, 10]
+    y_range = [1, 10]
+    z_range = [1, 10]
+    
+    # Risk threshold plane (z=7)
+    fig.add_trace(go.Mesh3d(
+        x=[1, 10, 10, 1, 1, 10, 10, 1],
+        y=[1, 1, 10, 10, 1, 1, 10, 10],
+        z=[7, 7, 7, 7, 7, 7, 7, 7],
+        opacity=0.15,
+        color='red',
+        name='High Risk Threshold',
+        showlegend=False,
+        hoverinfo='skip'
     ))
     
     fig.update_layout(
-        title="3D Workstream Analysis: Complexity vs Automation vs Risk",
+        title="3D Strategic Analysis: Complexity × Automation × Risk",
         scene=dict(
-            xaxis_title="Complexity Level (1-10)",
-            yaxis_title="Automation Level (1-10)", 
-            zaxis_title="Risk Level (1-10)",
+            xaxis_title="Complexity Level →",
+            yaxis_title="Automation Level →", 
+            zaxis_title="Risk Level →",
+            xaxis=dict(range=[0, 11]),
+            yaxis=dict(range=[0, 11]),
+            zaxis=dict(range=[0, 11]),
             camera=dict(
-                eye=dict(x=1.5, y=1.5, z=1.5)
-            )
+                eye=dict(x=1.8, y=1.8, z=1.2)
+            ),
+            annotations=[
+                dict(x=9, y=9, z=2, text="✅ Optimal Zone", showarrow=False, 
+                     bgcolor="rgba(0,255,0,0.2)", bordercolor="green"),
+                dict(x=2, y=2, z=9, text="🚨 Critical Zone", showarrow=False,
+                     bgcolor="rgba(255,0,0,0.2)", bordercolor="red")
+            ]
         ),
-        width=800,
-        height=600,
-        margin=dict(r=20, b=10, l=10, t=40)
+        width=900,
+        height=700
+    )
+    
+    return fig
+
+def create_3d_investment_performance():
+    """3D: Investment vs Performance vs Timeline"""
+    df = pd.DataFrame(st.session_state.workstream_data)
+    
+    # Calculate performance score
+    df['performance_score'] = (df['automation'] * 0.4 + (11-df['risk']) * 0.3 + df['completion']/10 * 0.3)
+    
+    # Calculate timeline (days to completion)
+    df['timeline_days'] = (100 - df['completion']) * 2
+    
+    fig = go.Figure()
+    
+    # Create traces by category
+    for category in df['category'].unique():
+        cat_data = df[df['category'] == category]
+        
+        fig.add_trace(go.Scatter3d(
+            x=cat_data['investment'],
+            y=cat_data['performance_score'],
+            z=cat_data['timeline_days'],
+            mode='markers+text',
+            marker=dict(
+                size=cat_data['completion']/3,  # Size by completion
+                color=get_category_color(category),
+                opacity=0.8,
+                line=dict(width=2, color='white')
+            ),
+            text=[f"{name[:8]}..." if len(name) > 8 else name for name in cat_data['name']],
+            textposition="middle center",
+            name=category,
+            hovertemplate='<b>%{customdata[0]}</b><br>' +
+                         'Investment: $%{x:.1f}M<br>' +
+                         'Performance Score: %{y:.2f}/10<br>' +
+                         'Timeline: %{z:.0f} days<br>' +
+                         'Completion: %{customdata[1]}%<br>' +
+                         'Priority: %{customdata[2]}<br>' +
+                         '<extra></extra>',
+            customdata=list(zip(cat_data['name'], cat_data['completion'], cat_data['priority']))
+        ))
+    
+    fig.update_layout(
+        title="3D Investment Analysis: Investment × Performance × Timeline",
+        scene=dict(
+            xaxis_title="Investment Amount ($M) →",
+            yaxis_title="Performance Score →",
+            zaxis_title="Days to Completion →",
+            camera=dict(eye=dict(x=1.5, y=1.5, z=1.5))
+        ),
+        width=900,
+        height=700
+    )
+    
+    return fig
+
+def create_3d_roi_analysis():
+    """3D: ROI Analysis with Risk and Completion"""
+    df = pd.DataFrame(st.session_state.workstream_data)
+    
+    # Calculate estimated ROI based on automation gain and risk reduction
+    df['roi_estimate'] = ((df['automation'] - 3) * 0.5 + (8 - df['risk']) * 0.3) * df['investment']
+    df['roi_estimate'] = df['roi_estimate'].clip(lower=-5, upper=20)  # Reasonable bounds
+    
+    fig = go.Figure()
+    
+    # Create surface plot for ROI landscape
+    investment_range = np.linspace(df['investment'].min(), df['investment'].max(), 20)
+    completion_range = np.linspace(df['completion'].min(), df['completion'].max(), 20)
+    
+    Investment, Completion = np.meshgrid(investment_range, completion_range)
+    ROI_surface = Investment * (Completion/100) * 2  # Simplified ROI calculation for surface
+    
+    fig.add_trace(go.Surface(
+        x=investment_range,
+        y=completion_range,
+        z=ROI_surface,
+        opacity=0.3,
+        colorscale='Viridis',
+        showscale=False,
+        name='ROI Landscape',
+        hoverinfo='skip'
+    ))
+    
+    # Add actual workstreams
+    for priority in ['High', 'Medium', 'Low']:
+        priority_data = df[df['priority'] == priority]
+        if len(priority_data) > 0:
+            priority_colors = {'High': 'red', 'Medium': 'orange', 'Low': 'lightgreen'}
+            
+            fig.add_trace(go.Scatter3d(
+                x=priority_data['investment'],
+                y=priority_data['completion'],
+                z=priority_data['roi_estimate'],
+                mode='markers+text',
+                marker=dict(
+                    size=15,
+                    color=priority_colors[priority],
+                    opacity=0.9,
+                    line=dict(width=2, color='white'),
+                    symbol='diamond' if priority == 'High' else 'circle'
+                ),
+                text=[name[:8] + '...' if len(name) > 8 else name for name in priority_data['name']],
+                textposition="top center",
+                name=f"{priority} Priority",
+                hovertemplate='<b>%{customdata[0]}</b><br>' +
+                             'Investment: $%{x:.1f}M<br>' +
+                             'Completion: %{y}%<br>' +
+                             'Est. ROI: $%{z:.1f}M<br>' +
+                             'Risk: %{customdata[1]}/10<br>' +
+                             'Automation: %{customdata[2]}/10<br>' +
+                             '<extra></extra>',
+                customdata=list(zip(priority_data['name'], priority_data['risk'], priority_data['automation']))
+            ))
+    
+    fig.update_layout(
+        title="3D ROI Analysis: Investment × Completion × Estimated ROI",
+        scene=dict(
+            xaxis_title="Investment Amount ($M) →",
+            yaxis_title="Completion Percentage % →",
+            zaxis_title="Estimated ROI ($M) →",
+            camera=dict(eye=dict(x=1.2, y=1.2, z=1.5))
+        ),
+        width=900,
+        height=700
+    )
+    
+    return fig
+
+def create_3d_scenario_analysis():
+    """3D: What-if Scenario Analysis"""
+    df = pd.DataFrame(st.session_state.workstream_data)
+    
+    fig = go.Figure()
+    
+    # Current state
+    fig.add_trace(go.Scatter3d(
+        x=df['complexity'],
+        y=df['completion'],
+        z=df['risk'],
+        mode='markers',
+        marker=dict(
+            size=12,
+            color=[get_category_color(cat) for cat in df['category']],
+            opacity=0.8,
+            line=dict(width=2, color='white')
+        ),
+        name='Current State',
+        text=df['name'],
+        hovertemplate='<b>%{text}</b><br>' +
+                     'Complexity: %{x}/10<br>' +
+                     'Completion: %{y}%<br>' +
+                     'Risk: %{z}/10<br>' +
+                     '<extra></extra>'
+    ))
+    
+    # Future state (optimistic scenario - more completion, less risk)
+    df_future = df.copy()
+    df_future['completion_future'] = np.minimum(100, df_future['completion'] + 30)
+    df_future['risk_future'] = np.maximum(1, df_future['risk'] - 2)
+    
+    fig.add_trace(go.Scatter3d(
+        x=df_future['complexity'],
+        y=df_future['completion_future'],
+        z=df_future['risk_future'],
+        mode='markers',
+        marker=dict(
+            size=12,
+            color=[get_category_color(cat) for cat in df_future['category']],
+            opacity=0.5,
+            symbol='diamond',
+            line=dict(width=2, color='green')
+        ),
+        name='Optimistic Future',
+        text=df_future['name'],
+        hovertemplate='<b>%{text}</b> (Future)<br>' +
+                     'Complexity: %{x}/10<br>' +
+                     'Completion: %{y}%<br>' +
+                     'Risk: %{z}/10<br>' +
+                     '<extra></extra>'
+    ))
+    
+    # Add trajectory lines
+    for i in range(len(df)):
+        fig.add_trace(go.Scatter3d(
+            x=[df.iloc[i]['complexity'], df_future.iloc[i]['complexity']],
+            y=[df.iloc[i]['completion'], df_future.iloc[i]['completion_future']],
+            z=[df.iloc[i]['risk'], df_future.iloc[i]['risk_future']],
+            mode='lines',
+            line=dict(color='gray', width=3, dash='dot'),
+            opacity=0.3,
+            showlegend=False,
+            hoverinfo='skip'
+        ))
+    
+    fig.update_layout(
+        title="3D Scenario Analysis: Current vs Future State Projections",
+        scene=dict(
+            xaxis_title="Complexity Level →",
+            yaxis_title="Completion Percentage % →",
+            zaxis_title="Risk Level →",
+            camera=dict(eye=dict(x=1.5, y=1.5, z=1.5))
+        ),
+        width=900,
+        height=700
+    )
+    
+    return fig
+
+def create_3d_network_analysis():
+    """3D: Workstream Interdependency Network"""
+    df = pd.DataFrame(st.session_state.workstream_data)
+    
+    # Create artificial dependencies based on categories and complexity
+    fig = go.Figure()
+    
+    # Position nodes in 3D space
+    positions = {}
+    for i, (_, row) in enumerate(df.iterrows()):
+        angle = i * (2 * np.pi / len(df))
+        radius = row['complexity']
+        x = radius * np.cos(angle)
+        y = radius * np.sin(angle) 
+        z = row['risk']
+        positions[row['name']] = (x, y, z)
+    
+    # Add dependency connections (simplified - connect similar categories)
+    for cat in df['category'].unique():
+        cat_workstreams = df[df['category'] == cat]
+        if len(cat_workstreams) > 1:
+            for i in range(len(cat_workstreams) - 1):
+                name1 = cat_workstreams.iloc[i]['name']
+                name2 = cat_workstreams.iloc[i + 1]['name']
+                
+                x1, y1, z1 = positions[name1]
+                x2, y2, z2 = positions[name2]
+                
+                fig.add_trace(go.Scatter3d(
+                    x=[x1, x2],
+                    y=[y1, y2],
+                    z=[z1, z2],
+                    mode='lines',
+                    line=dict(color=get_category_color(cat), width=4, opacity=0.5),
+                    showlegend=False,
+                    hoverinfo='skip'
+                ))
+    
+    # Add workstream nodes
+    for _, row in df.iterrows():
+        x, y, z = positions[row['name']]
+        
+        fig.add_trace(go.Scatter3d(
+            x=[x],
+            y=[y],
+            z=[z],
+            mode='markers+text',
+            marker=dict(
+                size=row['investment'] * 5,
+                color=get_category_color(row['category']),
+                opacity=0.8,
+                line=dict(width=2, color='white')
+            ),
+            text=row['name'][:8] + '...' if len(row['name']) > 8 else row['name'],
+            textposition="middle center",
+            name=row['category'],
+            showlegend=False,
+            hovertemplate='<b>%{text}</b><br>' +
+                         'Category: ' + row['category'] + '<br>' +
+                         'Investment: $' + f"{row['investment']:.1f}" + 'M<br>' +
+                         'Complexity: ' + f"{row['complexity']}" + '/10<br>' +
+                         'Risk: ' + f"{row['risk']}" + '/10<br>' +
+                         '<extra></extra>'
+        ))
+    
+    fig.update_layout(
+        title="3D Network Analysis: Workstream Interdependencies",
+        scene=dict(
+            xaxis_title="Network Position X",
+            yaxis_title="Network Position Y",
+            zaxis_title="Risk Level →",
+            camera=dict(eye=dict(x=1.8, y=1.8, z=1.2))
+        ),
+        width=900,
+        height=700
     )
     
     return fig
@@ -659,12 +984,197 @@ with main_tab1:
         st.metric("High Priority", f"{high_priority} workstreams")
 
 with main_tab2:
-    st.markdown("### 3D Workstream Analysis")
-    st.markdown("*Interactive 3D visualization showing the relationship between complexity, automation level, and risk. Marker size represents investment amount.*")
+    st.markdown("### 🎲 Advanced 3D Workstream Analysis")
+    st.markdown("*Explore multi-dimensional relationships with sophisticated 3D analysis tools. Each visualization reveals different strategic insights.*")
     
-    # Create and display 3D plot
-    fig_3d = create_3d_analysis()
-    st.plotly_chart(fig_3d, use_container_width=True)
+    # 3D Analysis selector
+    analysis_type = st.selectbox(
+        "Select 3D Analysis Type:",
+        [
+            "🎯 Strategic Analysis (Complexity × Automation × Risk)",
+            "💰 Investment Performance (Investment × Performance × Timeline)", 
+            "📊 ROI Analysis (Investment × Completion × ROI)",
+            "🔮 Scenario Planning (Current vs Future Projections)",
+            "🌐 Network Dependencies (Workstream Interdependencies)"
+        ],
+        key="analysis_selector"
+    )
+    
+    if "Strategic Analysis" in analysis_type:
+        st.markdown("""
+        **Enhanced Strategic 3D Analysis**
+        - **Priority Grouping**: Different shapes and colors by priority level
+        - **Reference Planes**: Visual risk threshold indicators  
+        - **Optimal Zones**: Green zones show ideal automation/low risk areas
+        - **Critical Zones**: Red zones highlight high-risk, low-automation areas
+        """)
+        
+        fig = create_3d_complexity_automation_risk()
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Strategic recommendations
+        df = pd.DataFrame(st.session_state.workstream_data)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 🎯 Strategic Recommendations")
+            optimal = df[(df['automation'] >= 7) & (df['risk'] <= 5)]
+            critical = df[(df['automation'] <= 4) & (df['risk'] >= 6)]
+            
+            if len(optimal) > 0:
+                st.success(f"**{len(optimal)} workstreams** in optimal zone")
+            if len(critical) > 0:
+                st.error(f"**{len(critical)} workstreams** need immediate attention")
+        
+        with col2:
+            st.markdown("#### 💡 Key Insights")
+            avg_automation = df['automation'].mean()
+            avg_risk = df['risk'].mean()
+            st.info(f"Portfolio Avg: {avg_automation:.1f}/10 automation, {avg_risk:.1f}/10 risk")
+    
+    elif "Investment Performance" in analysis_type:
+        st.markdown("""
+        **Investment Performance 3D Analysis**
+        - **Performance Score**: Calculated from automation, risk, and completion
+        - **Timeline Projection**: Days to completion based on current progress
+        - **Investment Efficiency**: See which investments yield best performance
+        - **Category Clustering**: Visualize performance by workstream category
+        """)
+        
+        fig = create_3d_investment_performance()
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Performance insights
+        df = pd.DataFrame(st.session_state.workstream_data)
+        df['performance_score'] = (df['automation'] * 0.4 + (11-df['risk']) * 0.3 + df['completion']/10 * 0.3)
+        df['timeline_days'] = (100 - df['completion']) * 2
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 🏆 Top Performers")
+            top_performers = df.nlargest(3, 'performance_score')
+            for _, row in top_performers.iterrows():
+                st.success(f"**{row['name']}** - Score: {row['performance_score']:.2f}/10")
+        
+        with col2:
+            st.markdown("#### ⚡ Quick Wins (Short Timeline)")
+            quick_wins = df.nsmallest(3, 'timeline_days')
+            for _, row in quick_wins.iterrows():
+                st.info(f"**{row['name']}** - {int(row['timeline_days'])} days")
+    
+    elif "ROI Analysis" in analysis_type:
+        st.markdown("""
+        **Return on Investment 3D Analysis**
+        - **ROI Surface**: 3D landscape showing ROI potential across investment/completion space
+        - **Actual Positions**: Current workstreams positioned on ROI landscape
+        - **Investment Efficiency**: Compare expected returns vs investment amounts
+        - **Priority Indicators**: High-priority items shown as diamonds
+        """)
+        
+        fig = create_3d_roi_analysis()
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # ROI insights
+        df = pd.DataFrame(st.session_state.workstream_data)
+        df['roi_estimate'] = ((df['automation'] - 3) * 0.5 + (8 - df['risk']) * 0.3) * df['investment']
+        df['roi_estimate'] = df['roi_estimate'].clip(lower=-5, upper=20)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 💰 Best ROI Opportunities")
+            best_roi = df.nlargest(3, 'roi_estimate')
+            for _, row in best_roi.iterrows():
+                st.success(f"**{row['name']}** - Est. ROI: ${row['roi_estimate']:.1f}M")
+        
+        with col2:
+            st.markdown("#### ⚠️ ROI Concerns")
+            low_roi = df.nsmallest(3, 'roi_estimate')
+            for _, row in low_roi.iterrows():
+                st.warning(f"**{row['name']}** - Est. ROI: ${row['roi_estimate']:.1f}M")
+    
+    elif "Scenario Planning" in analysis_type:
+        st.markdown("""
+        **Future Scenario 3D Projections**
+        - **Current State**: Solid markers show current workstream positions
+        - **Future Projections**: Diamond markers show optimistic future state
+        - **Trajectory Lines**: Dotted lines connect current to future positions
+        - **Progress Visualization**: See potential improvement paths for each workstream
+        """)
+        
+        fig = create_3d_scenario_analysis()
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Scenario insights
+        df = pd.DataFrame(st.session_state.workstream_data)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 📈 Projected Improvements")
+            st.info("**Optimistic Scenario Assumptions:**")
+            st.write("• +30% completion increase")
+            st.write("• -2 points risk reduction")
+            st.write("• Complexity remains constant")
+        
+        with col2:
+            st.markdown("#### 🎯 Biggest Opportunity")
+            biggest_gaps = df[df['completion'] < 50]
+            if len(biggest_gaps) > 0:
+                for _, row in biggest_gaps.head(3).iterrows():
+                    st.warning(f"**{row['name']}** - {row['completion']}% complete")
+    
+    elif "Network Dependencies" in analysis_type:
+        st.markdown("""
+        **Workstream Interdependency Network 3D**
+        - **Network Layout**: Workstreams positioned by complexity (radius) and risk (height)
+        - **Category Connections**: Lines connect related workstreams within categories
+        - **Dependency Visualization**: See which workstreams are interconnected
+        - **Investment Sizing**: Node size represents investment amount
+        """)
+        
+        fig = create_3d_network_analysis()
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Network insights
+        df = pd.DataFrame(st.session_state.workstream_data)
+        category_counts = df['category'].value_counts()
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 🌐 Network Statistics")
+            st.info(f"**{len(df)}** total workstreams")
+            st.info(f"**{len(category_counts)}** categories")
+            st.info(f"**{category_counts.max()}** max per category")
+        
+        with col2:
+            st.markdown("#### 🔗 Dependency Insights")
+            st.warning("**High Complexity Categories** may create bottlenecks")
+            complex_categories = df.groupby('category')['complexity'].mean().sort_values(ascending=False)
+            for cat, complexity in complex_categories.head(3).items():
+                st.write(f"• {cat}: {complexity:.1f}/10")
+    
+    # Advanced controls
+    st.markdown("---")
+    st.markdown("### 🎛️ Advanced Controls")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🔄 Reset Camera View", key="reset_camera"):
+            st.info("Refresh the page to reset 3D camera positions")
+    
+    with col2:
+        show_insights = st.checkbox("📊 Show Data Insights", value=True, key="show_insights")
+    
+    with col3:
+        export_3d = st.button("💾 Export 3D Data", key="export_3d")
+        if export_3d:
+            df = pd.DataFrame(st.session_state.workstream_data)
+            st.download_button(
+                "Download 3D Analysis Data",
+                df.to_csv(index=False),
+                "3d_workstream_analysis.csv",
+                "text/csv"
+            )
     
     # Analysis insights
     df = pd.DataFrame(st.session_state.workstream_data)
