@@ -577,8 +577,8 @@ def create_3d_scenario_analysis():
     
     # Future state (optimistic scenario - more completion, less risk)
     df_future = df.copy()
-    df_future['completion_future'] = np.minimum(100, df_future['completion'] + 30)
-    df_future['risk_future'] = np.maximum(1, df_future['risk'] - 2)
+    df_future['completion_future'] = np.minimum(100, df_future['completion'] + 30).astype(int)
+    df_future['risk_future'] = np.maximum(1, df_future['risk'] - 2).astype(int)
     
     fig.add_trace(go.Scatter3d(
         x=df_future['complexity'],
