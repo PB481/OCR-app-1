@@ -4341,8 +4341,21 @@ with main_tab8:
                     st.metric("High Score Cases", f"{high_score}/{len(scores_df)}")
                 
                 with col3:
-                    total_investment = scores_df['Investment_Required_M'].sum()
-                    st.metric("Total Investment", f"${total_investment:.1f}M")
+                    # Handle different investment column names
+                    investment_col = None
+                    for col_name in ['Investment_Required_M', 'investment', 'Estimated_Investment_USD', 'Investment_Required_USD']:
+                        if col_name in scores_df.columns:
+                            investment_col = col_name
+                            break
+                    
+                    if investment_col:
+                        total_investment = scores_df[investment_col].sum()
+                        # Convert to millions if needed
+                        if 'USD' in investment_col:
+                            total_investment = total_investment / 1000000
+                        st.metric("Total Investment", f"${total_investment:.1f}M")
+                    else:
+                        st.metric("Total Investment", "N/A")
                 
                 with col4:
                     pipeline_ready = len(scores_df[scores_df['Total_Score'] >= 70])
@@ -4351,13 +4364,21 @@ with main_tab8:
                 # Scoring visualization
                 st.markdown("##### Scoring Analysis")
                 
+                # Create investment size column for scatter plot
+                if investment_col and investment_col in scores_df.columns:
+                    size_data = scores_df[investment_col]
+                    if 'USD' in investment_col:
+                        size_data = size_data / 1000000  # Convert to millions for sizing
+                else:
+                    size_data = [1] * len(scores_df)  # Default size
+                
                 fig_scores = px.scatter(
                     scores_df,
                     x='Financial_Score',
                     y='Strategic_Score',
-                    size='Investment_Required_M',
+                    size=size_data,
                     color='Total_Score',
-                    hover_name='Case_Name',
+                    hover_name='Case_Name' if 'Case_Name' in scores_df.columns else None,
                     hover_data=['Feasibility_Score', 'Impact_Score', 'Resource_Score'],
                     title="Business Case Scoring Matrix",
                     labels={
@@ -4423,7 +4444,11 @@ with main_tab8:
             if parking_lot_cases:
                 for case in parking_lot_cases:
                     with st.expander(f"{case.get('Case_Name', 'Unknown Case')} - {case.get('Total_Score', 0):.1f}/100"):
-                        st.write(f"**Investment:** ${case.get('Investment_Required_M', 0):.1f}M")
+                        # Handle different investment field names
+                        investment = case.get('Investment_Required_M', case.get('investment', case.get('Estimated_Investment_USD', 0)))
+                        if isinstance(investment, (int, float)) and investment > 1000000:
+                            investment = investment / 1000000  # Convert to millions
+                        st.write(f"**Investment:** ${investment:.1f}M")
                         st.write(f"**Workstream:** {case.get('Primary_Workstream', 'N/A')}")
                         st.write(f"**Region:** {case.get('Target_Region', 'N/A')}")
                         
@@ -4439,7 +4464,11 @@ with main_tab8:
             if backlog_cases:
                 for case in backlog_cases:
                     with st.expander(f"{case.get('Case_Name', 'Unknown Case')}"):
-                        st.write(f"**Investment:** ${case.get('Investment_Required_M', 0):.1f}M")
+                        # Handle different investment field names
+                        investment = case.get('Investment_Required_M', case.get('investment', case.get('Estimated_Investment_USD', 0)))
+                        if isinstance(investment, (int, float)) and investment > 1000000:
+                            investment = investment / 1000000  # Convert to millions
+                        st.write(f"**Investment:** ${investment:.1f}M")
                         st.write(f"**Score:** {case.get('Total_Score', 0):.1f}/100")
                         
                         if st.button(f"Add to Roadmap", key=f"move_roadmap_{case.get('Case_Name', '')}"):
@@ -4455,14 +4484,25 @@ with main_tab8:
                 for case in roadmap_cases:
                     with st.expander(f"{case.get('Case_Name', 'Unknown Case')}"):
                         st.write(f"**Timeline:** {case.get('Implementation_Timeline', 'TBD')}")
-                        st.write(f"**Investment:** ${case.get('Investment_Required_M', 0):.1f}M")
+                        # Handle different investment field names
+                        investment = case.get('Investment_Required_M', case.get('investment', case.get('Estimated_Investment_USD', 0)))
+                        if isinstance(investment, (int, float)) and investment > 1000000:
+                            investment = investment / 1000000  # Convert to millions
+                        st.write(f"**Investment:** ${investment:.1f}M")
                         st.write(f"**Score:** {case.get('Total_Score', 0):.1f}/100")
         
         # Pipeline analytics
         st.markdown("---")
         st.markdown("##### 📈 Pipeline Analytics")
         
-        total_pipeline_investment = sum([case.get('Investment_Required_M', 0) for case in parking_lot_cases + backlog_cases + roadmap_cases])
+        # Calculate total pipeline investment with flexible field names
+        total_pipeline_investment = 0
+        for case in parking_lot_cases + backlog_cases + roadmap_cases:
+            investment = case.get('Investment_Required_M', case.get('investment', case.get('Estimated_Investment_USD', 0)))
+            if isinstance(investment, (int, float)):
+                if investment > 1000000:  # Convert USD to millions
+                    investment = investment / 1000000
+                total_pipeline_investment += investment
         
         pipeline_col1, pipeline_col2, pipeline_col3 = st.columns(3)
         with pipeline_col1:
