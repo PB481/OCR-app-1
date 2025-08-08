@@ -2467,7 +2467,7 @@ def workstream_management_interface():
         ])
         
         # Create enhanced Excel file with multiple sheets
-        excel_buffer = BytesIO()
+        excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
             # Main template sheet
             template_data.to_excel(writer, sheet_name='Workstream_Examples', index=False)
