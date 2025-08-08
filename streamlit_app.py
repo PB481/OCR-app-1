@@ -4286,6 +4286,16 @@ with main_tab8:
     with bc_tab2:
         st.markdown("#### Scoring & Gap Analysis Dashboard")
         
+        # Debug information
+        with st.expander("🔍 Data Status (Debug Info)", expanded=False):
+            st.write(f"Business case data empty: {st.session_state.business_case_data.empty}")
+            if not st.session_state.business_case_data.empty:
+                st.write(f"Number of rows: {len(st.session_state.business_case_data)}")
+                st.write(f"Columns: {list(st.session_state.business_case_data.columns)}")
+                st.dataframe(st.session_state.business_case_data.head(2), use_container_width=True, hide_index=True)
+            else:
+                st.write("No business case data found. Please upload data in the Data Management tab.")
+        
         if not st.session_state.business_case_data.empty:
             # Process uploaded business case data
             all_cases = []
