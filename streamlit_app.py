@@ -4286,6 +4286,69 @@ with main_tab8:
     with bc_tab2:
         st.markdown("#### Scoring & Gap Analysis Dashboard")
         
+        # Explanation of Scoring & Gap Analysis
+        with st.expander("📊 How Scoring & Gap Analysis Works", expanded=False):
+            st.markdown("""
+            ### 🎯 **Business Case Scoring Methodology**
+            
+            Each business case is evaluated across **5 weighted categories** to generate a comprehensive score out of 100:
+            
+            #### **Scoring Categories:**
+            
+            **💰 Financial Score (30% weight)**
+            - **ROI Analysis**: Return on Investment percentage (normalized to 10-point scale)
+            - **Payback Period**: Shorter payback periods score higher
+            - **Formula**: `(ROI Score × 0.6) + (Payback Score × 0.4)`
+            
+            **🎯 Strategic Alignment Score (25% weight)** 
+            - **Strategic Fit**: Alignment with organizational objectives
+            - **Client Impact**: Expected improvement in client satisfaction/outcomes
+            - **Formula**: `(Strategic Alignment × 0.7) + (Client Impact × 0.3)`
+            
+            **⚙️ Implementation Feasibility Score (20% weight)**
+            - **Technology Complexity**: Lower complexity scores higher
+            - **Implementation Risk**: Lower risk scores higher  
+            - **Formula**: `(Complexity Penalty × 0.5) + (Risk Penalty × 0.5)`
+            
+            **📈 Business Impact Score (15% weight)**
+            - **Process Efficiency Gains**: Current vs Target efficiency improvement
+            - **Error Rate Reduction**: Reduction in operational errors
+            - **Formula**: `(Efficiency Gain × 0.6) + (Error Reduction × 0.4)`
+            
+            **👥 Resource Efficiency Score (10% weight)**
+            - **FTE Optimization**: Reduction in full-time equivalent staff needed
+            - **Resource Utilization**: More efficient use of existing resources
+            
+            ---
+            
+            ### 📊 **Gap Analysis Process**
+            
+            **Current vs Target State Analysis:**
+            - **Process Efficiency Gap**: Target efficiency - Current efficiency  
+            - **Error Rate Gap**: Current error rate - Target error rate
+            - **Client Satisfaction Gap**: Target satisfaction - Current satisfaction
+            - **FTE Efficiency Gap**: Current FTE count - Target FTE count
+            
+            **Gap Scoring:**
+            - Larger positive gaps indicate greater improvement potential
+            - Each gap includes percentage improvement calculations
+            - Recommendations generated based on gap severity
+            
+            ---
+            
+            ### 🚀 **Pipeline Qualification**
+            
+            **Automatic Promotion Criteria:**
+            - **Threshold Score**: ≥70 points qualifies for Parking Lot
+            - **Strategic Threshold**: ≥70 Strategic Score recommended  
+            - **Financial Threshold**: ≥70 Financial Score recommended
+            
+            **Pipeline Stages:**
+            1. **🅿️ Parking Lot**: Qualified cases awaiting assessment
+            2. **📋 Backlog**: Approved cases ready for funding
+            3. **🗺️ Roadmap**: Funded cases with implementation timeline
+            """)
+        
         # Debug information
         with st.expander("🔍 Data Status (Debug Info)", expanded=False):
             st.write(f"Business case data empty: {st.session_state.business_case_data.empty}")
