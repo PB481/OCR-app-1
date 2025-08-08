@@ -229,6 +229,226 @@ def generate_capital_excel_report(metrics, filtered_df):
         filtered_df.to_excel(writer, sheet_name='Project_Details', index=False)
     return output.getvalue()
 
+def create_capital_projects_template():
+    """Creates a Capital Projects Excel template with examples and comprehensive structure"""
+    
+    # Get current year for dynamic columns
+    current_year = datetime.now().year
+    
+    # Generate monthly columns for current year
+    monthly_cols = {}
+    for i in range(1, 13):
+        month_str = f"{current_year}_{i:02d}"
+        monthly_cols[f"{month_str}_A"] = 0.0  # Actuals
+        monthly_cols[f"{month_str}_F"] = 0.0  # Forecasts  
+        monthly_cols[f"{month_str}_CP"] = 0.0  # Capital Plan
+    
+    # Create comprehensive example data
+    example_projects = pd.DataFrame([
+        {
+            'PROJECT_ID': 'PROJ_001',
+            'PROJECT_NAME': '📊 EXAMPLE: Digital Trade Processing Platform',
+            'PORTFOLIO_OBS_LEVEL1': 'Technology Infrastructure',
+            'SUB_PORTFOLIO_OBS_LEVEL2': 'Trading Systems',
+            'PROJECT_MANAGER': 'Jane Smith',
+            'BRS_CLASSIFICATION': 'Mandatory - Regulatory',
+            'FUND_DECISION': 'Approved',
+            'BUSINESS_ALLOCATION': 5000000.0,  # $5M allocation
+            'CURRENT_EAC': 4800000.0,  # $4.8M current estimate
+            'ALL_PRIOR_YEARS_ACTUALS': 1200000.0,  # $1.2M spent in prior years
+            **monthly_cols,
+            'DESCRIPTION': 'Modernization of trade processing infrastructure to handle increased volumes and reduce operational risk',
+            'START_DATE': '2024-01-01',
+            'END_DATE': '2025-12-31',
+            'STATUS': 'In Progress',
+            'RISK_LEVEL': 'Medium'
+        },
+        {
+            'PROJECT_ID': 'PROJ_002', 
+            'PROJECT_NAME': '🏛️ EXAMPLE: Regulatory Reporting Automation',
+            'PORTFOLIO_OBS_LEVEL1': 'Regulatory Compliance',
+            'SUB_PORTFOLIO_OBS_LEVEL2': 'Reporting Systems',
+            'PROJECT_MANAGER': 'Bob Johnson',
+            'BRS_CLASSIFICATION': 'Strategic - Business Growth',
+            'FUND_DECISION': 'Under Review',
+            'BUSINESS_ALLOCATION': 3200000.0,  # $3.2M allocation
+            'CURRENT_EAC': 3100000.0,  # $3.1M current estimate
+            'ALL_PRIOR_YEARS_ACTUALS': 800000.0,  # $800K spent in prior years
+            **monthly_cols,
+            'DESCRIPTION': 'Automated regulatory report generation to reduce manual effort and improve accuracy',
+            'START_DATE': '2024-03-01',
+            'END_DATE': '2025-06-30', 
+            'STATUS': 'Planning',
+            'RISK_LEVEL': 'Low'
+        },
+        {
+            'PROJECT_ID': 'PROJ_003',
+            'PROJECT_NAME': '💼 EXAMPLE: Client Portal Enhancement',
+            'PORTFOLIO_OBS_LEVEL1': 'Client Experience',
+            'SUB_PORTFOLIO_OBS_LEVEL2': 'Digital Channels',
+            'PROJECT_MANAGER': 'Alice Chen',
+            'BRS_CLASSIFICATION': 'Strategic - Client Satisfaction',
+            'FUND_DECISION': 'Approved',
+            'BUSINESS_ALLOCATION': 2800000.0,  # $2.8M allocation
+            'CURRENT_EAC': 2900000.0,  # $2.9M current estimate (over budget)
+            'ALL_PRIOR_YEARS_ACTUALS': 500000.0,  # $500K spent in prior years
+            **monthly_cols,
+            'DESCRIPTION': 'Enhanced client portal with real-time reporting and mobile access',
+            'START_DATE': '2024-02-01',
+            'END_DATE': '2024-11-30',
+            'STATUS': 'In Progress',
+            'RISK_LEVEL': 'High'
+        }
+    ])
+    
+    # Add some realistic monthly data to examples
+    for idx in example_projects.index:
+        if idx == 0:  # First project - steady spending
+            for i in range(1, 7):  # First 6 months actuals
+                example_projects.loc[idx, f"{current_year}_{i:02d}_A"] = 200000.0
+            for i in range(7, 13):  # Remaining forecasts  
+                example_projects.loc[idx, f"{current_year}_{i:02d}_F"] = 180000.0
+            for i in range(1, 13):  # Capital plan
+                example_projects.loc[idx, f"{current_year}_{i:02d}_CP"] = 190000.0
+                
+        elif idx == 1:  # Second project - back-loaded spending
+            for i in range(1, 4):  # First 3 months actuals
+                example_projects.loc[idx, f"{current_year}_{i:02d}_A"] = 50000.0
+            for i in range(4, 13):  # Remaining forecasts
+                example_projects.loc[idx, f"{current_year}_{i:02d}_F"] = 280000.0
+            for i in range(1, 13):  # Capital plan
+                example_projects.loc[idx, f"{current_year}_{i:02d}_CP"] = 200000.0
+                
+        elif idx == 2:  # Third project - front-loaded spending
+            for i in range(1, 6):  # First 5 months actuals
+                example_projects.loc[idx, f"{current_year}_{i:02d}_A"] = 350000.0
+            for i in range(6, 13):  # Remaining forecasts
+                example_projects.loc[idx, f"{current_year}_{i:02d}_F"] = 150000.0
+            for i in range(1, 13):  # Capital plan
+                example_projects.loc[idx, f"{current_year}_{i:02d}_CP"] = 225000.0
+    
+    # Create template structure with empty rows for user input
+    template_data = pd.DataFrame([
+        {
+            'PROJECT_ID': '',
+            'PROJECT_NAME': '',
+            'PORTFOLIO_OBS_LEVEL1': '',
+            'SUB_PORTFOLIO_OBS_LEVEL2': '',
+            'PROJECT_MANAGER': '',
+            'BRS_CLASSIFICATION': '',
+            'FUND_DECISION': '',
+            'BUSINESS_ALLOCATION': 0.0,
+            'CURRENT_EAC': 0.0,
+            'ALL_PRIOR_YEARS_ACTUALS': 0.0,
+            **{col: 0.0 for col in monthly_cols.keys()},
+            'DESCRIPTION': '',
+            'START_DATE': '',
+            'END_DATE': '',
+            'STATUS': '',
+            'RISK_LEVEL': ''
+        } for _ in range(10)  # 10 empty rows for user projects
+    ])
+    
+    # Create instructions sheet
+    instructions = pd.DataFrame([
+        {'Field': 'PROJECT_ID', 'Description': 'Unique identifier for the project', 'Example': 'PROJ_001', 'Required': 'Yes'},
+        {'Field': 'PROJECT_NAME', 'Description': 'Full name of the capital project', 'Example': 'Digital Trade Processing Platform', 'Required': 'Yes'},
+        {'Field': 'PORTFOLIO_OBS_LEVEL1', 'Description': 'High-level portfolio category', 'Example': 'Technology Infrastructure', 'Required': 'Yes'}, 
+        {'Field': 'SUB_PORTFOLIO_OBS_LEVEL2', 'Description': 'Sub-portfolio classification', 'Example': 'Trading Systems', 'Required': 'Yes'},
+        {'Field': 'PROJECT_MANAGER', 'Description': 'Name of project manager', 'Example': 'Jane Smith', 'Required': 'Yes'},
+        {'Field': 'BRS_CLASSIFICATION', 'Description': 'Business requirement classification', 'Example': 'Mandatory - Regulatory, Strategic - Business Growth', 'Required': 'Yes'},
+        {'Field': 'FUND_DECISION', 'Description': 'Current funding decision status', 'Example': 'Approved, Under Review, Rejected', 'Required': 'Yes'},
+        {'Field': 'BUSINESS_ALLOCATION', 'Description': 'Total allocated budget for the project ($)', 'Example': '5000000', 'Required': 'Yes'},
+        {'Field': 'CURRENT_EAC', 'Description': 'Current Estimate at Completion ($)', 'Example': '4800000', 'Required': 'Yes'},
+        {'Field': 'ALL_PRIOR_YEARS_ACTUALS', 'Description': 'Total actual spend from prior years ($)', 'Example': '1200000', 'Required': 'Yes'},
+        {'Field': f'{current_year}_MM_A', 'Description': f'Monthly actual spend for {current_year} (format: {current_year}_01_A for January)', 'Example': '200000', 'Required': 'No'},
+        {'Field': f'{current_year}_MM_F', 'Description': f'Monthly forecast spend for {current_year} (format: {current_year}_07_F for July)', 'Example': '180000', 'Required': 'No'},
+        {'Field': f'{current_year}_MM_CP', 'Description': f'Monthly capital plan for {current_year} (format: {current_year}_01_CP for January)', 'Example': '190000', 'Required': 'No'},
+        {'Field': 'DESCRIPTION', 'Description': 'Detailed description of project objectives', 'Example': 'Modernization of trade processing infrastructure...', 'Required': 'No'},
+        {'Field': 'START_DATE', 'Description': 'Project start date (YYYY-MM-DD)', 'Example': '2024-01-01', 'Required': 'No'},
+        {'Field': 'END_DATE', 'Description': 'Project end date (YYYY-MM-DD)', 'Example': '2025-12-31', 'Required': 'No'},
+        {'Field': 'STATUS', 'Description': 'Current project status', 'Example': 'In Progress, Planning, Completed', 'Required': 'No'},
+        {'Field': 'RISK_LEVEL', 'Description': 'Overall project risk assessment', 'Example': 'Low, Medium, High', 'Required': 'No'}
+    ])
+    
+    # Create calculation guide
+    calculations = pd.DataFrame([
+        {'Metric': 'SUM_ACTUAL_SPEND_YTD', 'Formula': 'Sum of all monthly actual columns up to current month', 'Purpose': 'Track year-to-date actual spending'},
+        {'Metric': 'SUM_OF_FORECASTED_NUMBERS', 'Formula': 'Sum of all monthly forecast columns for full year', 'Purpose': 'Total forecasted spending for the year'},
+        {'Metric': 'RUN_RATE_PER_MONTH', 'Formula': '(Total Actuals + Total Forecasts) / 12', 'Purpose': 'Average monthly spend rate'},
+        {'Metric': 'CAPITAL_VARIANCE', 'Formula': 'BUSINESS_ALLOCATION - Total Forecasts', 'Purpose': 'Variance between allocation and forecast'},
+        {'Metric': 'CAPITAL_UNDERSPEND', 'Formula': 'CAPITAL_VARIANCE (if positive)', 'Purpose': 'Potential budget underspend'},
+        {'Metric': 'CAPITAL_OVERSPEND', 'Formula': 'Absolute CAPITAL_VARIANCE (if negative)', 'Purpose': 'Potential budget overspend'},
+        {'Metric': 'NET_REALLOCATION_AMOUNT', 'Formula': 'Total Underspend - Total Overspend', 'Purpose': 'Net amount available for reallocation'},
+        {'Metric': 'AVERAGE_MONTHLY_SPREAD_SCORE', 'Formula': 'Average absolute difference between actual and forecast by month', 'Purpose': 'Project performance consistency measure'}
+    ])
+    
+    # Create in-memory Excel file
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write examples sheet
+        example_projects.to_excel(writer, sheet_name='Examples', index=False)
+        
+        # Write template sheet
+        template_data.to_excel(writer, sheet_name='Template', index=False)
+        
+        # Write instructions
+        instructions.to_excel(writer, sheet_name='Instructions', index=False)
+        
+        # Write calculations guide
+        calculations.to_excel(writer, sheet_name='Calculations', index=False)
+        
+        # Get workbook and worksheets for formatting
+        workbook = writer.book
+        
+        # Define formats
+        header_format = workbook.add_format({
+            'bold': True,
+            'text_wrap': True,
+            'valign': 'top',
+            'fg_color': '#4BACC6',
+            'border': 1
+        })
+        
+        currency_format = workbook.add_format({'num_format': '$#,##0.00'})
+        
+        # Format Examples sheet
+        examples_sheet = writer.sheets['Examples']
+        examples_sheet.set_row(0, 20, header_format)
+        
+        # Format currency columns in examples
+        currency_cols = ['BUSINESS_ALLOCATION', 'CURRENT_EAC', 'ALL_PRIOR_YEARS_ACTUALS'] + list(monthly_cols.keys())
+        for col_name in currency_cols:
+            if col_name in example_projects.columns:
+                col_idx = example_projects.columns.get_loc(col_name)
+                examples_sheet.set_column(col_idx, col_idx, 12, currency_format)
+        
+        # Format Template sheet
+        template_sheet = writer.sheets['Template']
+        template_sheet.set_row(0, 20, header_format)
+        
+        # Format currency columns in template
+        for col_name in currency_cols:
+            if col_name in template_data.columns:
+                col_idx = template_data.columns.get_loc(col_name)
+                template_sheet.set_column(col_idx, col_idx, 12, currency_format)
+        
+        # Format Instructions sheet
+        instructions_sheet = writer.sheets['Instructions']
+        instructions_sheet.set_row(0, 20, header_format)
+        instructions_sheet.set_column(0, 0, 25)  # Field column
+        instructions_sheet.set_column(1, 1, 50)  # Description column
+        instructions_sheet.set_column(2, 2, 30)  # Example column
+        
+        # Format Calculations sheet
+        calculations_sheet = writer.sheets['Calculations']
+        calculations_sheet.set_row(0, 20, header_format)
+        calculations_sheet.set_column(0, 0, 30)  # Metric column
+        calculations_sheet.set_column(1, 1, 50)  # Formula column
+        calculations_sheet.set_column(2, 2, 40)  # Purpose column
+    
+    return output.getvalue()
+
 # P&L Analysis Functions
 def create_pl_template():
     """Create a comprehensive P&L template for Fund Admin/Accounting Product."""
@@ -3474,6 +3694,74 @@ with main_tab4:
     st.markdown("### 💰 Capital Project Portfolio Dashboard")
     st.markdown("This section provides an interactive overview of your capital projects, allowing you to track financials, monitor trends, and identify variances.")
     
+    # Template Section
+    st.markdown("---")
+    st.subheader("📋 Capital Projects Template & Examples")
+    st.markdown("*Download a comprehensive Excel template with examples and instructions for capital project data collection.*")
+    
+    template_col1, template_col2 = st.columns(2)
+    
+    with template_col1:
+        st.markdown("**📊 Template Features:**")
+        st.markdown("""
+        - **Examples Sheet**: 3 fully populated sample capital projects with realistic data
+        - **Template Sheet**: 10 empty rows ready for your project data
+        - **Instructions Sheet**: Detailed field descriptions and requirements
+        - **Calculations Sheet**: Explanation of all derived metrics and formulas
+        - **Pre-formatted**: Currency formatting and professional styling
+        """)
+        
+        # Generate and provide download
+        template_data = create_capital_projects_template()
+        st.download_button(
+            label="📥 Download Capital Projects Template",
+            data=template_data,
+            file_name=f"capital_projects_template_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            help="Download a comprehensive Excel template with examples and instructions"
+        )
+    
+    with template_col2:
+        st.markdown("**🔍 Template Preview:**")
+        
+        # Create preview data
+        preview_data = pd.DataFrame([
+            {'Field': 'PROJECT_ID', 'Example': 'PROJ_001', 'Description': 'Unique identifier'},
+            {'Field': 'PROJECT_NAME', 'Example': '📊 Digital Trade Processing Platform', 'Description': 'Full project name'},
+            {'Field': 'PORTFOLIO_OBS_LEVEL1', 'Example': 'Technology Infrastructure', 'Description': 'High-level category'},
+            {'Field': 'BUSINESS_ALLOCATION', 'Example': '$5,000,000.00', 'Description': 'Total allocated budget'},
+            {'Field': 'CURRENT_EAC', 'Example': '$4,800,000.00', 'Description': 'Current estimate at completion'},
+            {'Field': '2025_01_A', 'Example': '$200,000.00', 'Description': 'January 2025 actuals'},
+            {'Field': '2025_07_F', 'Example': '$180,000.00', 'Description': 'July 2025 forecast'}
+        ])
+        
+        st.dataframe(preview_data, use_container_width=True, hide_index=True)
+        
+        if st.button("📖 View Full Template Structure", key="preview_capital_template"):
+            st.markdown("**📋 Complete Template Structure:**")
+            
+            # Show comprehensive field list
+            current_year = datetime.now().year
+            field_categories = {
+                "**🏷️ Project Identification**": ['PROJECT_ID', 'PROJECT_NAME', 'DESCRIPTION'],
+                "**📁 Portfolio Classification**": ['PORTFOLIO_OBS_LEVEL1', 'SUB_PORTFOLIO_OBS_LEVEL2', 'BRS_CLASSIFICATION'],
+                "**👥 Management**": ['PROJECT_MANAGER', 'FUND_DECISION', 'STATUS', 'RISK_LEVEL'],
+                "**💰 Financial Core**": ['BUSINESS_ALLOCATION', 'CURRENT_EAC', 'ALL_PRIOR_YEARS_ACTUALS'],
+                "**📅 Timeline**": ['START_DATE', 'END_DATE'],
+                f"**📊 {current_year} Monthly Data**": [
+                    f'{current_year}_01_A (Jan Actuals)', f'{current_year}_01_F (Jan Forecast)', f'{current_year}_01_CP (Jan Plan)',
+                    '...', 
+                    f'{current_year}_12_A (Dec Actuals)', f'{current_year}_12_F (Dec Forecast)', f'{current_year}_12_CP (Dec Plan)'
+                ]
+            }
+            
+            for category, fields in field_categories.items():
+                st.markdown(category)
+                for field in fields:
+                    st.markdown(f"  • {field}")
+    
+    st.markdown("---")
+    st.subheader("📤 Upload Your Capital Project Data")
     uploaded_file = st.file_uploader("Upload your Capital Project CSV or Excel file", type=["csv", "xlsx"], key="capital_project_upload")
     
     if uploaded_file is not None:
