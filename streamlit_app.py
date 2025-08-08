@@ -4399,7 +4399,9 @@ with main_tab8:
                 top_cases = scores_df.nlargest(5, 'Total_Score')
                 
                 for _, case in top_cases.iterrows():
-                    with st.expander(f"📊 {case['Case_Name']} - Score: {case['Total_Score']:.1f}/100"):
+                    # Handle different case name field names
+                    case_name = case.get('Case_Name', case.get('Case_Title', case.get('name', 'Unnamed Case')))
+                    with st.expander(f"📊 {case_name} - Score: {case['Total_Score']:.1f}/100"):
                         gap_analysis = create_gap_analysis(case.to_dict())
                         
                         # Score breakdown
@@ -4561,11 +4563,19 @@ with main_tab8:
                     if st.button("📄 Generate Word Document", type="primary"):
                         try:
                             # Create a simple text version for now
+                            # Get case title with fallbacks
+                            doc_title = case_data.get('Case_Name', case_data.get('Case_Title', case_data.get('name', 'N/A')))
+                            
+                            # Get investment with unit conversion
+                            doc_investment = case_data.get('Investment_Required_M', case_data.get('investment', case_data.get('Estimated_Investment_USD', 0)))
+                            if isinstance(doc_investment, (int, float)) and doc_investment > 1000000:
+                                doc_investment = doc_investment / 1000000
+                            
                             word_content = f"""
 BUSINESS CASE DOCUMENT
 
-Title: {case_data.get('Case_Name', 'N/A')}
-Investment Required: ${case_data.get('Investment_Required_M', 0):.1f}M
+Title: {doc_title}
+Investment Required: ${doc_investment:.1f}M
 Implementation Timeline: {case_data.get('Implementation_Timeline', 'TBD')}
 Primary Workstream: {case_data.get('Primary_Workstream', 'N/A')}
 Target Region: {case_data.get('Target_Region', 'N/A')}
