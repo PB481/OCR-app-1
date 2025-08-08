@@ -4487,7 +4487,7 @@ with main_tab8:
                     overall_score, score_breakdown = calculate_business_case_score(case)
                     case_with_score = {
                         **case, 
-                        'Total_Score': overall_score,
+                        'Total_Score': overall_score * 10,  # Convert to 100-point scale
                         'Financial_Score': score_breakdown.get('Financial', 0) * 10,
                         'Strategic_Score': score_breakdown.get('Strategic', 0) * 10,
                         'Feasibility_Score': score_breakdown.get('Feasibility', 0) * 10,
@@ -4773,7 +4773,7 @@ with main_tab8:
                     supporting_data = {}  # Simplified to prevent errors
                     overall_score, score_breakdown = calculate_business_case_score(case_data)
                     case_data.update({
-                        'Total_Score': overall_score,
+                        'Total_Score': overall_score * 10,  # Convert to 100-point scale
                         'Financial_Score': score_breakdown.get('Financial', 0) * 10,
                         'Strategic_Score': score_breakdown.get('Strategic', 0) * 10,
                         'Feasibility_Score': score_breakdown.get('Feasibility', 0) * 10,
