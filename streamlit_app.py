@@ -4196,19 +4196,19 @@ with main_tab8:
     
     # Create main interface tabs
     bc_tab1, bc_tab2, bc_tab3, bc_tab4 = st.tabs([
-        "📝 Create Business Case",
+        "📋 Data Management",
         "📊 Scoring & Analysis", 
         "🗂️ Management Pipeline",
         "📤 Export & Reports"
     ])
     
     with bc_tab1:
-        st.markdown("#### Business Case Creation")
+        st.markdown("#### Business Case Data Management")
         
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            st.markdown("##### Template Upload & Download")
+            st.markdown("##### 📋 Download Template")
             
             # Download business case template
             template_data = create_business_case_template()
@@ -4223,6 +4223,11 @@ with main_tab8:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
+            st.info("💡 **Template includes:** Financial metrics, strategic alignment scores, implementation details, and current vs target state analysis fields.")
+        
+        with col2:
+            st.markdown("##### 📤 Upload Business Case Data")
+            
             # Upload business case data
             uploaded_bc_file = st.file_uploader("Upload Business Case Data", type=['xlsx', 'csv'], key="bc_upload")
             
@@ -4236,74 +4241,59 @@ with main_tab8:
                     st.session_state.business_case_data = bc_data
                     st.success(f"✅ Loaded {len(bc_data)} business case records")
                     
+                    # Display preview of loaded data
+                    st.markdown("**Data Preview:**")
+                    preview_cols = ['Case_Title', 'Estimated_Investment_USD', 'Expected_Annual_Savings_USD', 'ROI_Percentage']
+                    available_cols = [col for col in preview_cols if col in bc_data.columns]
+                    if available_cols:
+                        st.dataframe(bc_data[available_cols].head(), use_container_width=True, hide_index=True)
+                    else:
+                        st.dataframe(bc_data.head(), use_container_width=True, hide_index=True)
+                    
                 except Exception as e:
                     st.error(f"Error loading business case data: {e}")
+            
+            else:
+                st.info("📁 Upload your completed business case template to begin analysis.")
+        
+        # Template information section
+        st.markdown("---")
+        st.markdown("#### 📊 Template Information")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("**📈 Financial Data**")
+            st.write("• Investment amounts")
+            st.write("• Expected savings") 
+            st.write("• ROI calculations")
+            st.write("• Payback periods")
         
         with col2:
-            st.markdown("##### Quick Business Case Creation")
-            
-            with st.form("quick_business_case"):
-                bc_name = st.text_input("Business Case Name*", placeholder="e.g., Enhanced NAV Calculation Platform")
-                
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    bc_workstream = st.selectbox("Primary Workstream", [
-                        'NAV Calculation', 'Portfolio Valuation', 'Trade Capture',
-                        'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'
-                    ])
-                    bc_region = st.selectbox("Target Region", ['North America', 'Europe', 'Asia-Pacific', 'Global', 'Latin America'])
-                
-                with col_b:
-                    bc_investment = st.number_input("Investment Required ($M)", min_value=0.0, max_value=100.0, value=5.0, step=0.5)
-                    bc_timeline = st.selectbox("Implementation Timeline", ['3 months', '6 months', '12 months', '18 months', '24+ months'])
-                
-                bc_description = st.text_area("Business Case Description*", 
-                    placeholder="Describe the business case, objectives, and expected outcomes...")
-                
-                bc_rationale = st.text_area("Strategic Rationale", 
-                    placeholder="Explain why this investment is critical and aligned with strategic objectives...")
-                
-                submitted = st.form_submit_button("🚀 Create Business Case", type="primary")
-                
-                if submitted and bc_name and bc_description:
-                    # Create quick business case
-                    quick_bc = {
-                        'Case_Name': bc_name,
-                        'Primary_Workstream': bc_workstream,
-                        'Target_Region': bc_region,
-                        'Investment_Required_M': bc_investment,
-                        'Implementation_Timeline': bc_timeline,
-                        'Description': bc_description,
-                        'Strategic_Rationale': bc_rationale,
-                        'Creation_Date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'Status': 'Draft'
-                    }
-                    
-                    # Add to session state
-                    if len(st.session_state.business_cases) == 0:
-                        st.session_state.business_cases = [quick_bc]
-                    else:
-                        st.session_state.business_cases.append(quick_bc)
-                    
-                    st.success(f"✅ Created business case: {bc_name}")
-                    st.rerun()
+            st.markdown("**🎯 Strategic Metrics**")
+            st.write("• Strategic alignment scores")
+            st.write("• Technology complexity")
+            st.write("• Implementation risk")
+            st.write("• Client impact assessment")
+        
+        with col3:
+            st.markdown("**🔄 Gap Analysis**")
+            st.write("• Current state metrics")
+            st.write("• Target state goals")
+            st.write("• Process efficiency gaps")
+            st.write("• Performance improvements")
     
     with bc_tab2:
         st.markdown("#### Scoring & Gap Analysis Dashboard")
         
-        if len(st.session_state.business_cases) > 0 or not st.session_state.business_case_data.empty:
-            # Combine quick cases and uploaded data
+        if not st.session_state.business_case_data.empty:
+            # Process uploaded business case data
             all_cases = []
             
-            # Add quick cases
-            for case in st.session_state.business_cases:
-                all_cases.append(case)
-            
             # Add uploaded cases
-            if not st.session_state.business_case_data.empty:
-                for _, row in st.session_state.business_case_data.iterrows():
-                    case_dict = row.to_dict()
-                    all_cases.append(case_dict)
+            for _, row in st.session_state.business_case_data.iterrows():
+                case_dict = row.to_dict()
+                all_cases.append(case_dict)
             
             if all_cases:
                 st.markdown(f"##### Analysis of {len(all_cases)} Business Cases")
@@ -4426,7 +4416,7 @@ with main_tab8:
                             st.write("💡 Consider phased implementation approach")
                             st.write("💡 Monitor progress with defined KPIs")
         else:
-            st.info("📝 Create business cases in the 'Create Business Case' tab to see scoring analysis.")
+            st.info("📁 Upload business case data in the 'Data Management' tab to see comprehensive scoring analysis.")
     
     with bc_tab3:
         st.markdown("#### Business Case Management Pipeline")
@@ -4520,23 +4510,17 @@ with main_tab8:
     with bc_tab4:
         st.markdown("#### Export & Document Generation")
         
-        if len(st.session_state.business_cases) > 0 or not st.session_state.business_case_data.empty:
+        if not st.session_state.business_case_data.empty:
             st.markdown("##### Generate Professional Documents")
             
             # Select business case for document generation
             all_case_names = []
             all_cases_dict = {}
             
-            for case in st.session_state.business_cases:
-                name = case.get('Case_Name', 'Unnamed Case')
+            for _, row in st.session_state.business_case_data.iterrows():
+                name = row.get('Case_Title', row.get('Case_Name', f"Case_{len(all_case_names)+1}"))
                 all_case_names.append(name)
-                all_cases_dict[name] = case
-            
-            if not st.session_state.business_case_data.empty:
-                for _, row in st.session_state.business_case_data.iterrows():
-                    name = row.get('Case_Name', f"Case_{len(all_case_names)+1}")
-                    all_case_names.append(name)
-                    all_cases_dict[name] = row.to_dict()
+                all_cases_dict[name] = row.to_dict()
             
             selected_case = st.selectbox("Select Business Case for Document Generation", all_case_names)
             
@@ -4633,7 +4617,7 @@ Generated by: Iluvalcar 2.0 Business Case Development System
                 st.json(case_data)
         
         else:
-            st.info("📝 Create business cases to generate documents and reports.")
+            st.info("📁 Upload business case data to generate professional documents and reports.")
 
 # Footer
 st.markdown("---")
