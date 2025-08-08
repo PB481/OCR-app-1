@@ -855,6 +855,10 @@ def create_3d_pl_profitability_analysis():
     service_colors = {'Fund_Accounting': '#FF6B6B', 'Fund_Administration': '#4ECDC4', 
                      'Transfer_Agency': '#45B7D1', 'Regulatory_Reporting': '#96CEB4'}
     
+    # Check if we have valid data
+    if len(pl_analysis) == 0:
+        return None
+    
     # Determine dominant service line for each client
     for _, row in pl_analysis.iterrows():
         revenues = [row['Fund_Accounting_Revenue_USD'], row['Fund_Administration_Revenue_USD'],
@@ -867,7 +871,7 @@ def create_3d_pl_profitability_analysis():
             z=[row['Fund_AUM_USD_Millions']],
             mode='markers+text',
             marker=dict(
-                size=row['Gross_Margin_Percent'] * 0.8,  # Size by profitability
+                size=max(5, min(30, abs(row['Gross_Margin_Percent']) * 0.8 + 5)),  # Size by profitability, clamped between 5-30
                 color=service_colors.get(dominant_service, '#B0B0B0'),
                 opacity=0.8,
                 line=dict(width=2, color='white'),
@@ -959,7 +963,7 @@ def create_3d_service_line_analysis():
         z=pl_analysis['Revenue_Per_AUM_BPS'],
         mode='markers+text',
         marker=dict(
-            size=pl_analysis['Total_Annual_Revenue_USD'] / 20000,  # Size by revenue
+            size=np.clip(pl_analysis['Total_Annual_Revenue_USD'] / 20000, 5, 30),  # Size by revenue, clamped between 5-30
             color=pl_analysis['Number_of_Funds'],
             colorscale='Viridis',
             showscale=True,
@@ -1006,13 +1010,29 @@ def create_3d_cost_efficiency_analysis():
     
     fig = go.Figure()
     
-    # Calculate efficiency ratios
-    pl_analysis['Labor_Efficiency'] = pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Direct_Labor_Cost']
-    pl_analysis['Tech_Efficiency'] = pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Technology_Cost']
-    pl_analysis['Overhead_Ratio'] = pl_analysis['Overhead_Allocation'] / pl_analysis['Total_Annual_Revenue_USD']
+    # Calculate efficiency ratios with safe division
+    pl_analysis['Labor_Efficiency'] = np.where(
+        pl_analysis['Total_Direct_Labor_Cost'] > 0, 
+        pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Direct_Labor_Cost'],
+        0
+    )
+    pl_analysis['Tech_Efficiency'] = np.where(
+        pl_analysis['Total_Technology_Cost'] > 0,
+        pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Technology_Cost'],
+        0
+    )
+    pl_analysis['Overhead_Ratio'] = np.where(
+        pl_analysis['Total_Annual_Revenue_USD'] > 0,
+        pl_analysis['Overhead_Allocation'] / pl_analysis['Total_Annual_Revenue_USD'],
+        0
+    )
     
-    # Create traces by profitability quartiles
-    quartiles = pd.qcut(pl_analysis['Gross_Margin_Percent'], q=4, labels=['Low', 'Medium-Low', 'Medium-High', 'High'])
+    # Create traces by profitability quartiles (with fallback for small datasets)
+    try:
+        quartiles = pd.qcut(pl_analysis['Gross_Margin_Percent'], q=4, labels=['Low', 'Medium-Low', 'Medium-High', 'High'])
+    except ValueError:
+        # Fallback for small datasets - use simple binning
+        quartiles = pd.cut(pl_analysis['Gross_Margin_Percent'], bins=4, labels=['Low', 'Medium-Low', 'Medium-High', 'High'])
     colors = {'Low': 'red', 'Medium-Low': 'orange', 'Medium-High': 'lightgreen', 'High': 'darkgreen'}
     
     for quartile in ['Low', 'Medium-Low', 'Medium-High', 'High']:
@@ -1025,7 +1045,7 @@ def create_3d_cost_efficiency_analysis():
                 z=quartile_data['Overhead_Ratio'] * 100,  # Convert to percentage
                 mode='markers+text',
                 marker=dict(
-                    size=quartile_data['Fund_AUM_USD_Millions'] / 100,
+                    size=np.clip(quartile_data['Fund_AUM_USD_Millions'] / 100, 5, 30),  # Size by AUM, clamped between 5-30
                     color=colors[quartile],
                     opacity=0.8,
                     line=dict(width=2, color='white'),
@@ -2363,10 +2383,22 @@ with main_tab2:
             # Cost efficiency insights
             pl_analysis = calculate_pl_metrics(st.session_state.pl_data)
             if not pl_analysis.empty:
-                # Calculate efficiency metrics
-                pl_analysis['Labor_Efficiency'] = pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Direct_Labor_Cost']
-                pl_analysis['Tech_Efficiency'] = pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Technology_Cost']
-                pl_analysis['Overhead_Ratio'] = pl_analysis['Overhead_Allocation'] / pl_analysis['Total_Annual_Revenue_USD']
+                # Calculate efficiency metrics with safe division
+                pl_analysis['Labor_Efficiency'] = np.where(
+                    pl_analysis['Total_Direct_Labor_Cost'] > 0, 
+                    pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Direct_Labor_Cost'],
+                    0
+                )
+                pl_analysis['Tech_Efficiency'] = np.where(
+                    pl_analysis['Total_Technology_Cost'] > 0,
+                    pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Technology_Cost'],
+                    0
+                )
+                pl_analysis['Overhead_Ratio'] = np.where(
+                    pl_analysis['Total_Annual_Revenue_USD'] > 0,
+                    pl_analysis['Overhead_Allocation'] / pl_analysis['Total_Annual_Revenue_USD'],
+                    0
+                )
                 
                 col1, col2 = st.columns(2)
                 with col1:
