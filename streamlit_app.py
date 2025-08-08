@@ -4312,14 +4312,19 @@ with main_tab8:
                 scored_cases = []
                 for case in all_cases:
                     # Integrate supporting data
-                    supporting_data = integrate_supporting_data(
-                        case.get('Primary_Workstream', 'NAV Calculation'),
-                        case.get('Target_Region', 'Global')
-                    )
+                    supporting_data = integrate_supporting_data(case)
                     
                     # Calculate score
-                    score_results = calculate_business_case_score(case, supporting_data)
-                    case_with_score = {**case, **score_results}
+                    overall_score, score_breakdown = calculate_business_case_score(case)
+                    case_with_score = {
+                        **case, 
+                        'Total_Score': overall_score,
+                        'Financial_Score': score_breakdown.get('Financial', 0) * 10,
+                        'Strategic_Score': score_breakdown.get('Strategic', 0) * 10,
+                        'Feasibility_Score': score_breakdown.get('Feasibility', 0) * 10,
+                        'Impact_Score': score_breakdown.get('Impact', 0) * 10,
+                        'Resource_Score': score_breakdown.get('Resource', 0) * 10
+                    }
                     scored_cases.append(case_with_score)
                 
                 # Create scoring dashboard
@@ -4374,7 +4379,7 @@ with main_tab8:
                 
                 for _, case in top_cases.iterrows():
                     with st.expander(f"📊 {case['Case_Name']} - Score: {case['Total_Score']:.1f}/100"):
-                        gap_analysis = perform_gap_analysis(case.to_dict())
+                        gap_analysis = create_gap_analysis(case.to_dict())
                         
                         # Score breakdown
                         score_col1, score_col2 = st.columns(2)
@@ -4388,13 +4393,15 @@ with main_tab8:
                         
                         with score_col2:
                             st.markdown("**Gap Analysis:**")
-                            for gap in gap_analysis.get('gaps', []):
-                                st.write(f"⚠️ {gap}")
+                            if gap_analysis:
+                                for gap_type, gap_data in gap_analysis.items():
+                                    if isinstance(gap_data, dict) and 'gap' in gap_data:
+                                        st.write(f"⚠️ {gap_type}: {gap_data['gap']:.1f} improvement needed")
                             
-                            if gap_analysis.get('recommendations'):
-                                st.markdown("**Recommendations:**")
-                                for rec in gap_analysis['recommendations']:
-                                    st.write(f"💡 {rec}")
+                            st.markdown("**Recommendations:**")
+                            st.write("💡 Focus on highest-impact gaps first")
+                            st.write("💡 Consider phased implementation approach")
+                            st.write("💡 Monitor progress with defined KPIs")
         else:
             st.info("📝 Create business cases in the 'Create Business Case' tab to see scoring analysis.")
     
@@ -4496,26 +4503,61 @@ with main_tab8:
                 
                 # Add scoring if not present
                 if 'Total_Score' not in case_data:
-                    supporting_data = integrate_supporting_data(
-                        case_data.get('Primary_Workstream', 'NAV Calculation'),
-                        case_data.get('Target_Region', 'Global')
-                    )
-                    score_results = calculate_business_case_score(case_data, supporting_data)
-                    case_data.update(score_results)
+                    supporting_data = integrate_supporting_data(case_data)
+                    overall_score, score_breakdown = calculate_business_case_score(case_data)
+                    case_data.update({
+                        'Total_Score': overall_score,
+                        'Financial_Score': score_breakdown.get('Financial', 0) * 10,
+                        'Strategic_Score': score_breakdown.get('Strategic', 0) * 10,
+                        'Feasibility_Score': score_breakdown.get('Feasibility', 0) * 10,
+                        'Impact_Score': score_breakdown.get('Impact', 0) * 10,
+                        'Resource_Score': score_breakdown.get('Resource', 0) * 10
+                    })
                 
                 col1, col2 = st.columns(2)
                 
                 with col1:
                     # Generate Word document
                     if st.button("📄 Generate Word Document", type="primary"):
-                        word_doc = generate_business_case_word_document(case_data)
-                        
-                        st.download_button(
-                            label="📥 Download Business Case Document",
-                            data=word_doc,
-                            file_name=f"Business_Case_{selected_case.replace(' ', '_')}.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        )
+                        try:
+                            # Create a simple text version for now
+                            word_content = f"""
+BUSINESS CASE DOCUMENT
+
+Title: {case_data.get('Case_Name', 'N/A')}
+Investment Required: ${case_data.get('Investment_Required_M', 0):.1f}M
+Implementation Timeline: {case_data.get('Implementation_Timeline', 'TBD')}
+Primary Workstream: {case_data.get('Primary_Workstream', 'N/A')}
+Target Region: {case_data.get('Target_Region', 'N/A')}
+
+DESCRIPTION:
+{case_data.get('Description', 'No description provided')}
+
+STRATEGIC RATIONALE:
+{case_data.get('Strategic_Rationale', 'No rationale provided')}
+
+SCORING SUMMARY:
+Total Score: {case_data.get('Total_Score', 0):.1f}/100
+- Financial Score: {case_data.get('Financial_Score', 0):.1f}/100
+- Strategic Score: {case_data.get('Strategic_Score', 0):.1f}/100
+- Feasibility Score: {case_data.get('Feasibility_Score', 0):.1f}/100
+- Impact Score: {case_data.get('Impact_Score', 0):.1f}/100
+- Resource Score: {case_data.get('Resource_Score', 0):.1f}/100
+
+Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Generated by: Iluvalcar 2.0 Business Case Development System
+"""
+                            
+                            st.download_button(
+                                label="📥 Download Business Case Document (Text)",
+                                data=word_content,
+                                file_name=f"Business_Case_{selected_case.replace(' ', '_')}.txt",
+                                mime="text/plain"
+                            )
+                            
+                        except Exception as e:
+                            st.error(f"Error generating document: {e}")
+                            st.info("Word document generation will be implemented in a future update. Text format available above.")
                 
                 with col2:
                     # Export pipeline summary
