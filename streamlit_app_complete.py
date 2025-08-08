@@ -306,19 +306,19 @@ def create_management_interface():
         col1, col2 = st.columns(2)
         
         with col1:
-            name = st.text_input("Workstream Name")
-            category = st.selectbox("Category", ['NAV Calculation', 'Portfolio Valuation', 'Trade Capture', 'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'])
-            priority = st.selectbox("Priority", ['Low', 'Medium', 'High', 'Critical'])
-            description = st.text_area("Description")
+            name = st.text_input("Workstream Name", key="add_name")
+            category = st.selectbox("Category", ['NAV Calculation', 'Portfolio Valuation', 'Trade Capture', 'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'], key="add_category")
+            priority = st.selectbox("Priority", ['Low', 'Medium', 'High', 'Critical'], key="add_priority")
+            description = st.text_area("Description", key="add_description")
         
         with col2:
-            complexity = st.slider("Complexity", 1, 10, 5)
-            automation = st.slider("Automation", 1, 10, 5)
-            risk = st.slider("Risk", 1, 10, 5)
-            investment = st.number_input("Investment (M)", min_value=0.0, value=1.0, step=0.1)
-            completion = st.slider("Completion %", 0, 100, 50)
+            complexity = st.slider("Complexity", 1, 10, 5, key="add_complexity")
+            automation = st.slider("Automation", 1, 10, 5, key="add_automation")
+            risk = st.slider("Risk", 1, 10, 5, key="add_risk")
+            investment = st.number_input("Investment (M)", min_value=0.0, value=1.0, step=0.1, key="add_investment")
+            completion = st.slider("Completion %", 0, 100, 50, key="add_completion")
         
-        if st.button("Add Workstream"):
+        if st.button("Add Workstream", key="add_button"):
             new_workstream = {
                 'id': f'ws_{len(st.session_state.workstream_data) + 1:03d}',
                 'name': name,
@@ -338,22 +338,22 @@ def create_management_interface():
     with st.expander("✏️ Edit Workstreams"):
         df = pd.DataFrame(st.session_state.workstream_data)
         if not df.empty:
-            selected_workstream = st.selectbox("Select workstream to edit", df['name'].tolist())
+            selected_workstream = st.selectbox("Select workstream to edit", df['name'].tolist(), key="edit_select")
             
             if selected_workstream:
                 workstream = df[df['name'] == selected_workstream].iloc[0]
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    new_name = st.text_input("Name", value=workstream['name'])
-                    new_category = st.selectbox("Category", ['NAV Calculation', 'Portfolio Valuation', 'Trade Capture', 'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'], index=['NAV Calculation', 'Portfolio Valuation', 'Trade Capture', 'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'].index(workstream['category']))
-                    new_priority = st.selectbox("Priority", ['Low', 'Medium', 'High', 'Critical'], index=['Low', 'Medium', 'High', 'Critical'].index(workstream['priority']))
+                    new_name = st.text_input("Name", value=workstream['name'], key="edit_name")
+                    new_category = st.selectbox("Category", ['NAV Calculation', 'Portfolio Valuation', 'Trade Capture', 'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'], index=['NAV Calculation', 'Portfolio Valuation', 'Trade Capture', 'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'].index(workstream['category']), key="edit_category")
+                    new_priority = st.selectbox("Priority", ['Low', 'Medium', 'High', 'Critical'], index=['Low', 'Medium', 'High', 'Critical'].index(workstream['priority']), key="edit_priority")
                 
                 with col2:
-                    new_completion = st.slider("Completion %", 0, 100, int(workstream['completion']))
-                    new_investment = st.number_input("Investment (M)", min_value=0.0, value=float(workstream['investment']), step=0.1)
+                    new_completion = st.slider("Completion %", 0, 100, int(workstream['completion']), key="edit_completion")
+                    new_investment = st.number_input("Investment (M)", min_value=0.0, value=float(workstream['investment']), step=0.1, key="edit_investment")
                 
-                if st.button("Update Workstream"):
+                if st.button("Update Workstream", key="edit_button"):
                     # Update the workstream in session state
                     for i, ws in enumerate(st.session_state.workstream_data):
                         if ws['name'] == selected_workstream:
@@ -366,6 +366,127 @@ def create_management_interface():
                             })
                             break
                     st.success("Workstream updated successfully!")
+
+def create_capital_projects():
+    """Create capital projects management interface"""
+    st.subheader("💰 Capital Projects Management")
+    
+    # File upload
+    uploaded_file = st.file_uploader("Upload Capital Project Data", type=['csv', 'xlsx'], key="capital_upload")
+    
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+            
+            st.session_state.capital_project_data = df
+            st.success("Capital project data loaded successfully!")
+            
+            # Display summary
+            st.write("**Project Summary:**")
+            st.write(f"Total Projects: {len(df)}")
+            if 'investment' in df.columns:
+                st.write(f"Total Investment: ${df['investment'].sum():,.0f}M")
+            
+            # Show data
+            st.dataframe(df.head(10))
+            
+        except Exception as e:
+            st.error(f"Error loading file: {e}")
+
+def create_pl_analysis():
+    """Create P&L analysis interface"""
+    st.subheader("💼 P&L Analysis")
+    
+    # File upload
+    uploaded_file = st.file_uploader("Upload P&L Data", type=['csv', 'xlsx'], key="pl_upload")
+    
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+            
+            st.session_state.pl_data = df
+            st.success("P&L data loaded successfully!")
+            
+            # Basic analysis
+            st.write("**P&L Summary:**")
+            st.write(f"Data Points: {len(df)}")
+            
+            # Show data
+            st.dataframe(df.head(10))
+            
+        except Exception as e:
+            st.error(f"Error loading file: {e}")
+
+def create_competitors_analysis():
+    """Create competitors analysis interface"""
+    st.subheader("🏆 Competitors Analysis")
+    
+    # File upload
+    uploaded_file = st.file_uploader("Upload Competitors Data", type=['csv', 'xlsx'], key="competitors_upload")
+    
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+            
+            st.session_state.competitors_data = df
+            st.success("Competitors data loaded successfully!")
+            
+            # Basic analysis
+            st.write("**Competitors Summary:**")
+            st.write(f"Competitors Analyzed: {len(df)}")
+            
+            # Show data
+            st.dataframe(df.head(10))
+            
+        except Exception as e:
+            st.error(f"Error loading file: {e}")
+
+def create_business_cases():
+    """Create business cases management interface"""
+    st.subheader("📋 Business Cases Management")
+    
+    # Add new business case
+    with st.expander("➕ Add New Business Case"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            case_name = st.text_input("Case Name", key="case_name")
+            case_category = st.selectbox("Category", ['Strategic', 'Operational', 'Technology', 'Regulatory'], key="case_category")
+            investment = st.number_input("Investment Required (M)", min_value=0.0, value=1.0, step=0.1, key="case_investment")
+        
+        with col2:
+            priority = st.selectbox("Priority", ['Low', 'Medium', 'High', 'Critical'], key="case_priority")
+            timeline = st.selectbox("Timeline", ['Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025'], key="case_timeline")
+            description = st.text_area("Description", key="case_description")
+        
+        if st.button("Add Business Case", key="case_add_button"):
+            new_case = {
+                'id': f'bc_{len(st.session_state.business_cases) + 1:03d}',
+                'name': case_name,
+                'category': case_category,
+                'investment': investment,
+                'priority': priority,
+                'timeline': timeline,
+                'description': description,
+                'created_date': datetime.now().strftime("%Y-%m-%d")
+            }
+            st.session_state.business_cases.append(new_case)
+            st.success("Business case added successfully!")
+    
+    # Display business cases
+    if st.session_state.business_cases:
+        st.write("**Existing Business Cases:**")
+        cases_df = pd.DataFrame(st.session_state.business_cases)
+        st.dataframe(cases_df)
 
 def create_dashboard():
     """Create comprehensive dashboard"""
@@ -398,13 +519,17 @@ def main():
     st.title("🏗️ Fund Administration Platform - Complete Edition")
     st.markdown("### Comprehensive Operational Workstreams Management")
     
-    # Create tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    # Create tabs with ALL original features
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
         "📊 Dashboard", 
         "🎯 Advanced Analytics", 
         "🌐 3D Analysis",
         "🕸️ Network Analysis",
-        "⚙️ Management"
+        "⚙️ Management",
+        "💰 Capital Projects",
+        "💼 P&L Analysis",
+        "🏆 Competitors Analysis",
+        "📋 Business Cases"
     ])
     
     with tab1:
@@ -427,6 +552,19 @@ def main():
     with tab5:
         create_management_interface()
     
+    with tab6:
+        create_capital_projects()
+    
+    with tab7:
+        create_pl_analysis()
+    
+    with tab8:
+        create_competitors_analysis()
+    
+    # Business Cases tab
+    with tab9:
+        create_business_cases()
+    
     # Footer
     st.markdown("---")
     st.markdown("**Fund Administration Platform - Complete Edition** - All features included")
@@ -438,6 +576,10 @@ def main():
         st.write("✅ Workstream Management")
         st.write("✅ Matrix Visualization")
         st.write("✅ Advanced Analytics")
+        st.write("✅ Capital Projects")
+        st.write("✅ P&L Analysis")
+        st.write("✅ Competitors Analysis")
+        st.write("✅ Business Cases")
         
         if SCIPY_AVAILABLE:
             st.write("✅ 3D Visualizations")
