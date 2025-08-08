@@ -2399,36 +2399,156 @@ def workstream_management_interface():
             - **description**: Text description (max 200 characters)
             """)
         
-        # Download template
-        st.markdown("#### 📥 Download Excel Template")
+        # Download template with comprehensive examples
+        st.markdown("#### 📥 Download Enhanced Workstream Template")
+        
+        # Create comprehensive template with 5 realistic examples
         template_data = pd.DataFrame([
             {
-                'id': 'template_001',
-                'name': 'Example Workstream Name',
+                'id': 'WS_001',
+                'name': 'AI-Enhanced NAV Calculation Platform',
                 'category': 'NAV Calculation',
-                'complexity': 5,
-                'automation': 5,
+                'complexity': 8,
+                'automation': 9,
+                'risk': 4,
+                'investment': 4.2,
+                'completion': 75,
+                'priority': 'High',
+                'description': 'Implement AI/ML algorithms for enhanced NAV calculation accuracy, real-time processing, and automated validation with 99.9% accuracy target'
+            },
+            {
+                'id': 'WS_002', 
+                'name': 'Real-Time Trade Settlement System',
+                'category': 'Trade Capture',
+                'complexity': 7,
+                'automation': 8,
                 'risk': 5,
-                'investment': 2.0,
-                'completion': 50,
+                'investment': 3.1,
+                'completion': 60,
+                'priority': 'High',
+                'description': 'Deploy T+0 settlement capability with blockchain integration for instant trade confirmation and reduced counterparty risk'
+            },
+            {
+                'id': 'WS_003',
+                'name': 'Automated Reconciliation Engine',
+                'category': 'Reconciliation', 
+                'complexity': 6,
+                'automation': 9,
+                'risk': 3,
+                'investment': 2.8,
+                'completion': 85,
                 'priority': 'Medium',
-                'description': 'Enter your workstream description here'
+                'description': 'Exception-based automated reconciliation system reducing manual intervention by 90% with intelligent break resolution'
+            },
+            {
+                'id': 'WS_004',
+                'name': 'Digital Client Reporting Portal',
+                'category': 'Reporting',
+                'complexity': 5,
+                'automation': 8,
+                'risk': 3,
+                'investment': 2.0,
+                'completion': 90,
+                'priority': 'Medium',
+                'description': 'Self-service client portal with real-time reporting, custom dashboards, and mobile access for enhanced client experience'
+            },
+            {
+                'id': 'WS_005',
+                'name': 'Blockchain Custody Integration',
+                'category': 'Portfolio Valuation',
+                'complexity': 9,
+                'automation': 6,
+                'risk': 7,
+                'investment': 5.5,
+                'completion': 40,
+                'priority': 'High',
+                'description': 'Integration of blockchain technology for secure digital asset custody, smart contract execution, and immutable audit trails'
             }
         ])
         
-        # Create Excel file in memory
-        from io import BytesIO
+        # Create enhanced Excel file with multiple sheets
         excel_buffer = BytesIO()
-        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-            template_data.to_excel(writer, sheet_name='Workstreams', index=False)
+        with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+            # Main template sheet
+            template_data.to_excel(writer, sheet_name='Workstream_Examples', index=False)
+            
+            # Instructions sheet
+            instructions = pd.DataFrame({
+                'Field': ['id', 'name', 'category', 'complexity', 'automation', 'risk', 'investment', 'completion', 'priority', 'description'],
+                'Description': [
+                    'Unique workstream identifier (e.g., WS_001)',
+                    'Descriptive name of the workstream/project',
+                    'Category: NAV Calculation, Portfolio Valuation, Trade Capture, Reconciliation, Corporate Actions, Expense Management, Reporting',
+                    'Technical complexity (1-10): 1=Simple, 10=Highly Complex',
+                    'Automation level (1-10): 1=Manual, 10=Fully Automated',
+                    'Risk level (1-10): 1=Low Risk, 10=High Risk',
+                    'Investment required in millions USD (e.g., 2.5 = $2.5M)',
+                    'Current completion percentage (0-100%)',
+                    'Priority: High, Medium, Low',
+                    'Detailed description of objectives and scope'
+                ],
+                'Valid_Values': [
+                    'Text (unique)',
+                    'Text (descriptive)',
+                    'NAV Calculation | Portfolio Valuation | Trade Capture | Reconciliation | Corporate Actions | Expense Management | Reporting',
+                    '1-10 (integer)',
+                    '1-10 (integer)',
+                    '1-10 (integer)', 
+                    'Number (decimal, e.g., 2.5)',
+                    '0-100 (integer)',
+                    'High | Medium | Low',
+                    'Text (detailed description)'
+                ]
+            })
+            instructions.to_excel(writer, sheet_name='Field_Instructions', index=False)
+            
+            # Scoring guide
+            scoring_guide = pd.DataFrame({
+                'Metric': ['Complexity Score', 'Automation Score', 'Risk Score', 'Investment Impact', 'Completion Status'],
+                'Scale': ['1-10', '1-10', '1-10', '$M', '0-100%'],
+                'Low_End': ['Simple/Basic', 'Fully Manual', 'Minimal Risk', 'Under $1M', '0-25%'],
+                'Mid_Range': ['Moderate', 'Semi-Automated', 'Moderate Risk', '$1M-$5M', '26-75%'],
+                'High_End': ['Highly Complex', 'Fully Automated', 'High Risk', 'Over $5M', '76-100%'],
+                'Best_Practice': [
+                    'Start with 6-8 for new initiatives',
+                    'Target 7+ for efficiency gains', 
+                    'Keep under 6 for feasibility',
+                    'Balance ROI with strategic value',
+                    'Update regularly for accuracy'
+                ]
+            })
+            scoring_guide.to_excel(writer, sheet_name='Scoring_Guide', index=False)
         
-        st.download_button(
-            label="📥 Download Excel Template",
-            data=excel_buffer.getvalue(),
-            file_name="workstream_template.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="download_template"
-        )
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.download_button(
+                label="📥 Download Enhanced Template",
+                data=excel_buffer.getvalue(),
+                file_name="Enhanced_Workstream_Template.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_template"
+            )
+            
+            st.info("💡 **Template includes:** 5 realistic examples, field instructions, and scoring guide across 3 Excel sheets")
+        
+        with col2:
+            # Template preview
+            st.markdown("**📊 Template Preview:**")
+            
+            # Show key metrics
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("Sample Workstreams", len(template_data))
+                st.metric("Total Investment", f"${template_data['investment'].sum():.1f}M")
+            with col_b:
+                st.metric("Avg Completion", f"{template_data['completion'].mean():.0f}%")
+                high_priority = len(template_data[template_data['priority'] == 'High'])
+                st.metric("High Priority", f"{high_priority}/{len(template_data)}")
+            
+            # Preview table
+            preview_cols = ['name', 'category', 'investment', 'completion', 'priority']
+            st.dataframe(template_data[preview_cols], use_container_width=True, hide_index=True)
         
         st.markdown("---")
         
