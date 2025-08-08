@@ -837,6 +837,228 @@ def create_3d_complexity_automation_risk():
     
     return fig
 
+def create_3d_pl_profitability_analysis():
+    """3D P&L Analysis: Revenue vs Costs vs AUM with Profitability Insights"""
+    # Check if P&L data is available
+    if st.session_state.pl_data.empty:
+        return None
+    
+    # Calculate P&L metrics
+    pl_analysis = calculate_pl_metrics(st.session_state.pl_data)
+    if pl_analysis.empty:
+        return None
+    
+    fig = go.Figure()
+    
+    # Create traces by service line dominance
+    service_lines = ['Fund_Accounting', 'Fund_Administration', 'Transfer_Agency', 'Regulatory_Reporting']
+    service_colors = {'Fund_Accounting': '#FF6B6B', 'Fund_Administration': '#4ECDC4', 
+                     'Transfer_Agency': '#45B7D1', 'Regulatory_Reporting': '#96CEB4'}
+    
+    # Determine dominant service line for each client
+    for _, row in pl_analysis.iterrows():
+        revenues = [row['Fund_Accounting_Revenue_USD'], row['Fund_Administration_Revenue_USD'],
+                   row['Transfer_Agency_Revenue_USD'], row['Regulatory_Reporting_Revenue_USD']]
+        dominant_service = service_lines[revenues.index(max(revenues))]
+        
+        fig.add_trace(go.Scatter3d(
+            x=[row['Total_Annual_Revenue_USD']],
+            y=[row['Total_Costs']],
+            z=[row['Fund_AUM_USD_Millions']],
+            mode='markers+text',
+            marker=dict(
+                size=row['Gross_Margin_Percent'] * 0.8,  # Size by profitability
+                color=service_colors.get(dominant_service, '#B0B0B0'),
+                opacity=0.8,
+                line=dict(width=2, color='white'),
+                symbol='diamond' if row['Gross_Margin_Percent'] > 25 else 'circle'
+            ),
+            text=[row['Client_Name'][:8] + '...' if len(row['Client_Name']) > 8 else row['Client_Name']],
+            textposition="top center",
+            name=f"{dominant_service.replace('_', ' ')} Focused",
+            showlegend=True,
+            hovertemplate='<b>%{customdata[0]}</b><br>' +
+                         'Revenue: $%{x:,.0f}<br>' +
+                         'Costs: $%{y:,.0f}<br>' +
+                         'AUM: $%{z:,.0f}M<br>' +
+                         'Gross Margin: %{customdata[1]:.1f}%<br>' +
+                         'Revenue per AUM: %{customdata[2]:.1f} bps<br>' +
+                         'Dominant Service: %{customdata[3]}<br>' +
+                         '<extra></extra>',
+            customdata=[[row['Client_Name'], row['Gross_Margin_Percent'], 
+                        row['Revenue_Per_AUM_BPS'], dominant_service.replace('_', ' ')]]
+        ))
+    
+    # Add profitability planes
+    revenue_range = [pl_analysis['Total_Annual_Revenue_USD'].min(), pl_analysis['Total_Annual_Revenue_USD'].max()]
+    cost_range = [pl_analysis['Total_Costs'].min(), pl_analysis['Total_Costs'].max()]
+    aum_range = [pl_analysis['Fund_AUM_USD_Millions'].min(), pl_analysis['Fund_AUM_USD_Millions'].max()]
+    
+    # Break-even plane (Revenue = Costs)
+    fig.add_trace(go.Mesh3d(
+        x=[revenue_range[0], revenue_range[1], revenue_range[1], revenue_range[0]],
+        y=[revenue_range[0], revenue_range[1], revenue_range[1], revenue_range[0]],
+        z=[aum_range[0], aum_range[0], aum_range[1], aum_range[1]],
+        opacity=0.15,
+        color='red',
+        name='Break-Even Plane',
+        showlegend=False,
+        hoverinfo='skip'
+    ))
+    
+    fig.update_layout(
+        title="3D P&L Analysis: Revenue × Costs × AUM",
+        scene=dict(
+            xaxis_title="Total Annual Revenue (USD) →",
+            yaxis_title="Total Costs (USD) →",
+            zaxis_title="Fund AUM (USD Millions) →",
+            camera=dict(eye=dict(x=1.5, y=1.5, z=1.2)),
+            annotations=[
+                dict(x=revenue_range[1]*0.8, y=cost_range[0]*1.2, z=aum_range[1]*0.8, 
+                     text="💰 High Profit Zone", showarrow=False, 
+                     bgcolor="rgba(0,255,0,0.2)", bordercolor="green"),
+                dict(x=revenue_range[0]*1.2, y=cost_range[1]*0.8, z=aum_range[0]*1.2,
+                     text="⚠️ Loss Zone", showarrow=False,
+                     bgcolor="rgba(255,0,0,0.2)", bordercolor="red")
+            ]
+        ),
+        width=900,
+        height=700
+    )
+    
+    return fig
+
+def create_3d_service_line_analysis():
+    """3D Service Line Analysis: Service Mix vs Profitability vs Efficiency"""
+    if st.session_state.pl_data.empty:
+        return None
+    
+    pl_analysis = calculate_pl_metrics(st.session_state.pl_data)
+    if pl_analysis.empty:
+        return None
+    
+    fig = go.Figure()
+    
+    # Calculate service line diversity index (Shannon entropy)
+    for idx, row in pl_analysis.iterrows():
+        revenues = [row['Fund_Accounting_Revenue_USD'], row['Fund_Administration_Revenue_USD'],
+                   row['Transfer_Agency_Revenue_USD'], row['Regulatory_Reporting_Revenue_USD']]
+        total_rev = sum(revenues)
+        if total_rev > 0:
+            proportions = [r/total_rev for r in revenues if r > 0]
+            diversity_index = -sum([p * np.log(p) for p in proportions if p > 0])
+        else:
+            diversity_index = 0
+        
+        pl_analysis.loc[idx, 'Service_Diversity_Index'] = diversity_index
+    
+    # Create scatter plot
+    fig.add_trace(go.Scatter3d(
+        x=pl_analysis['Service_Diversity_Index'],
+        y=pl_analysis['Gross_Margin_Percent'],
+        z=pl_analysis['Revenue_Per_AUM_BPS'],
+        mode='markers+text',
+        marker=dict(
+            size=pl_analysis['Total_Annual_Revenue_USD'] / 20000,  # Size by revenue
+            color=pl_analysis['Number_of_Funds'],
+            colorscale='Viridis',
+            showscale=True,
+            colorbar=dict(title="Number of Funds"),
+            opacity=0.8,
+            line=dict(width=2, color='white')
+        ),
+        text=[name[:6] + '...' if len(name) > 6 else name for name in pl_analysis['Client_Name']],
+        textposition="middle center",
+        name="Clients",
+        hovertemplate='<b>%{customdata[0]}</b><br>' +
+                     'Service Diversity: %{x:.2f}<br>' +
+                     'Gross Margin: %{y:.1f}%<br>' +
+                     'Revenue per AUM: %{z:.1f} bps<br>' +
+                     'Number of Funds: %{customdata[1]}<br>' +
+                     'Total Revenue: $%{customdata[2]:,.0f}<br>' +
+                     '<extra></extra>',
+        customdata=list(zip(pl_analysis['Client_Name'], pl_analysis['Number_of_Funds'], 
+                           pl_analysis['Total_Annual_Revenue_USD']))
+    ))
+    
+    fig.update_layout(
+        title="3D Service Line Analysis: Diversity × Profitability × Efficiency",
+        scene=dict(
+            xaxis_title="Service Line Diversity Index →",
+            yaxis_title="Gross Margin (%) →",
+            zaxis_title="Revenue per AUM (bps) →",
+            camera=dict(eye=dict(x=1.5, y=1.5, z=1.5))
+        ),
+        width=900,
+        height=700
+    )
+    
+    return fig
+
+def create_3d_cost_efficiency_analysis():
+    """3D Cost Analysis: Labor vs Technology vs Overhead Efficiency"""
+    if st.session_state.pl_data.empty:
+        return None
+    
+    pl_analysis = calculate_pl_metrics(st.session_state.pl_data)
+    if pl_analysis.empty:
+        return None
+    
+    fig = go.Figure()
+    
+    # Calculate efficiency ratios
+    pl_analysis['Labor_Efficiency'] = pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Direct_Labor_Cost']
+    pl_analysis['Tech_Efficiency'] = pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Technology_Cost']
+    pl_analysis['Overhead_Ratio'] = pl_analysis['Overhead_Allocation'] / pl_analysis['Total_Annual_Revenue_USD']
+    
+    # Create traces by profitability quartiles
+    quartiles = pd.qcut(pl_analysis['Gross_Margin_Percent'], q=4, labels=['Low', 'Medium-Low', 'Medium-High', 'High'])
+    colors = {'Low': 'red', 'Medium-Low': 'orange', 'Medium-High': 'lightgreen', 'High': 'darkgreen'}
+    
+    for quartile in ['Low', 'Medium-Low', 'Medium-High', 'High']:
+        quartile_data = pl_analysis[quartiles == quartile]
+        
+        if not quartile_data.empty:
+            fig.add_trace(go.Scatter3d(
+                x=quartile_data['Labor_Efficiency'],
+                y=quartile_data['Tech_Efficiency'],
+                z=quartile_data['Overhead_Ratio'] * 100,  # Convert to percentage
+                mode='markers+text',
+                marker=dict(
+                    size=quartile_data['Fund_AUM_USD_Millions'] / 100,
+                    color=colors[quartile],
+                    opacity=0.8,
+                    line=dict(width=2, color='white'),
+                    symbol='diamond' if quartile == 'High' else 'circle'
+                ),
+                text=[name[:5] + '...' if len(name) > 5 else name for name in quartile_data['Client_Name']],
+                textposition="top center",
+                name=f"{quartile} Profitability",
+                hovertemplate='<b>%{customdata[0]}</b><br>' +
+                             'Labor Efficiency: %{x:.2f}x<br>' +
+                             'Tech Efficiency: %{y:.2f}x<br>' +
+                             'Overhead Ratio: %{z:.1f}%<br>' +
+                             'Gross Margin: %{customdata[1]:.1f}%<br>' +
+                             'AUM: $%{customdata[2]:,.0f}M<br>' +
+                             '<extra></extra>',
+                customdata=list(zip(quartile_data['Client_Name'], quartile_data['Gross_Margin_Percent'],
+                               quartile_data['Fund_AUM_USD_Millions']))
+            ))
+    
+    fig.update_layout(
+        title="3D Cost Efficiency Analysis: Labor × Technology × Overhead",
+        scene=dict(
+            xaxis_title="Labor Efficiency (Revenue/Labor Cost) →",
+            yaxis_title="Technology Efficiency (Revenue/Tech Cost) →",
+            zaxis_title="Overhead Ratio (%) →",
+            camera=dict(eye=dict(x=1.5, y=1.5, z=1.2))
+        ),
+        width=900,
+        height=700
+    )
+    
+    return fig
+
 def create_3d_investment_performance():
     """3D: Investment vs Performance vs Timeline"""
     df = pd.DataFrame(st.session_state.workstream_data)
@@ -1853,16 +2075,36 @@ with main_tab2:
     st.markdown("### 🎲 Advanced 3D Workstream Analysis")
     st.markdown("*Explore multi-dimensional relationships with sophisticated 3D analysis tools. Each visualization reveals different strategic insights.*")
     
+    # Check if P&L data is available for additional analyses
+    pl_available = not st.session_state.pl_data.empty
+    
+    # Base workstream analysis options
+    base_options = [
+        "🎯 Strategic Analysis (Complexity × Automation × Risk)",
+        "💰 Investment Performance (Investment × Performance × Timeline)", 
+        "📊 ROI Analysis (Investment × Completion × ROI)",
+        "🔮 Scenario Planning (Current vs Future Projections)",
+        "🌐 Network Dependencies (Workstream Interdependencies)"
+    ]
+    
+    # P&L analysis options
+    pl_options = [
+        "💼 P&L Profitability (Revenue × Costs × AUM)",
+        "💼 Service Line Diversity (Diversity × Profitability × Efficiency)",
+        "💼 Cost Efficiency (Labor × Technology × Overhead)"
+    ]
+    
+    if pl_available:
+        all_options = base_options + ["---"] + pl_options
+        st.success("🎯 P&L Analysis enabled! Advanced financial 3D visualizations available.")
+    else:
+        all_options = base_options
+        st.info("💡 Upload P&L data in the P&L Analysis tab to unlock advanced financial 3D visualizations.")
+    
     # 3D Analysis selector
     analysis_type = st.selectbox(
         "Select 3D Analysis Type:",
-        [
-            "🎯 Strategic Analysis (Complexity × Automation × Risk)",
-            "💰 Investment Performance (Investment × Performance × Timeline)", 
-            "📊 ROI Analysis (Investment × Completion × ROI)",
-            "🔮 Scenario Planning (Current vs Future Projections)",
-            "🌐 Network Dependencies (Workstream Interdependencies)"
-        ],
+        all_options,
         key="analysis_selector"
     )
     
@@ -2017,6 +2259,133 @@ with main_tab2:
             complex_categories = df.groupby('category')['complexity'].mean().sort_values(ascending=False)
             for cat, complexity in complex_categories.head(3).items():
                 st.write(f"• {cat}: {complexity:.1f}/10")
+    
+    elif "P&L Profitability" in analysis_type:
+        st.markdown("""
+        **P&L Profitability 3D Analysis**
+        - **Revenue vs Costs**: Shows the relationship between revenue and costs
+        - **AUM Dimension**: Assets Under Management as the third dimension
+        - **Service Line Coloring**: Colors represent dominant service line
+        - **Profitability Sizing**: Marker size represents gross margin percentage
+        - **Break-Even Plane**: Visual reference for break-even threshold
+        """)
+        
+        fig = create_3d_pl_profitability_analysis()
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # P&L insights
+            pl_analysis = calculate_pl_metrics(st.session_state.pl_data)
+            if not pl_analysis.empty:
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### 💰 Profitability Insights")
+                    avg_margin = pl_analysis['Gross_Margin_Percent'].mean()
+                    high_margin_count = len(pl_analysis[pl_analysis['Gross_Margin_Percent'] > 25])
+                    st.info(f"**{avg_margin:.1f}%** average gross margin")
+                    st.info(f"**{high_margin_count}** high-margin clients (>25%)")
+                
+                with col2:
+                    st.markdown("#### 🎯 Service Line Focus")
+                    service_revenues = [
+                        pl_analysis['Fund_Accounting_Revenue_USD'].sum(),
+                        pl_analysis['Fund_Administration_Revenue_USD'].sum(),
+                        pl_analysis['Transfer_Agency_Revenue_USD'].sum(),
+                        pl_analysis['Regulatory_Reporting_Revenue_USD'].sum()
+                    ]
+                    service_names = ['Fund Accounting', 'Fund Administration', 'Transfer Agency', 'Regulatory Reporting']
+                    dominant = service_names[service_revenues.index(max(service_revenues))]
+                    st.success(f"**{dominant}** is the dominant service line")
+        else:
+            st.warning("P&L data is required for this analysis. Please upload data in the P&L Analysis tab.")
+    
+    elif "Service Line Diversity" in analysis_type:
+        st.markdown("""
+        **Service Line Diversity 3D Analysis**
+        - **Diversity Index**: Shannon entropy measuring service line mix
+        - **Profitability**: Gross margin percentage
+        - **Efficiency**: Revenue per AUM in basis points
+        - **Fund Count**: Color scale represents number of funds managed
+        - **Revenue Sizing**: Marker size proportional to total revenue
+        """)
+        
+        fig = create_3d_service_line_analysis()
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Service diversity insights
+            pl_analysis = calculate_pl_metrics(st.session_state.pl_data)
+            if not pl_analysis.empty:
+                # Calculate diversity scores
+                diversity_scores = []
+                for _, row in pl_analysis.iterrows():
+                    revenues = [row['Fund_Accounting_Revenue_USD'], row['Fund_Administration_Revenue_USD'],
+                               row['Transfer_Agency_Revenue_USD'], row['Regulatory_Reporting_Revenue_USD']]
+                    total_rev = sum(revenues)
+                    if total_rev > 0:
+                        proportions = [r/total_rev for r in revenues if r > 0]
+                        diversity_index = -sum([p * np.log(p) for p in proportions if p > 0])
+                    else:
+                        diversity_index = 0
+                    diversity_scores.append(diversity_index)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### 🌈 Diversity Analysis")
+                    avg_diversity = np.mean(diversity_scores)
+                    max_diversity = np.log(4)  # Maximum possible for 4 service lines
+                    st.info(f"**{avg_diversity:.2f}** average diversity index")
+                    st.info(f"**{(avg_diversity/max_diversity)*100:.1f}%** of maximum diversity")
+                
+                with col2:
+                    st.markdown("#### 📈 Performance Correlation")
+                    high_diversity = [i for i, d in enumerate(diversity_scores) if d > avg_diversity]
+                    if high_diversity:
+                        high_div_margin = pl_analysis.iloc[high_diversity]['Gross_Margin_Percent'].mean()
+                        st.success(f"High-diversity clients avg **{high_div_margin:.1f}%** margin")
+        else:
+            st.warning("P&L data is required for this analysis. Please upload data in the P&L Analysis tab.")
+    
+    elif "Cost Efficiency" in analysis_type:
+        st.markdown("""
+        **Cost Efficiency 3D Analysis**
+        - **Labor Efficiency**: Revenue divided by direct labor costs
+        - **Technology Efficiency**: Revenue divided by technology costs  
+        - **Overhead Ratio**: Overhead as percentage of revenue
+        - **Profitability Quartiles**: Color-coded by gross margin quartiles
+        - **AUM Sizing**: Marker size represents Assets Under Management
+        """)
+        
+        fig = create_3d_cost_efficiency_analysis()
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Cost efficiency insights
+            pl_analysis = calculate_pl_metrics(st.session_state.pl_data)
+            if not pl_analysis.empty:
+                # Calculate efficiency metrics
+                pl_analysis['Labor_Efficiency'] = pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Direct_Labor_Cost']
+                pl_analysis['Tech_Efficiency'] = pl_analysis['Total_Annual_Revenue_USD'] / pl_analysis['Total_Technology_Cost']
+                pl_analysis['Overhead_Ratio'] = pl_analysis['Overhead_Allocation'] / pl_analysis['Total_Annual_Revenue_USD']
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### ⚡ Efficiency Benchmarks")
+                    avg_labor_eff = pl_analysis['Labor_Efficiency'].mean()
+                    avg_tech_eff = pl_analysis['Tech_Efficiency'].mean()
+                    avg_overhead = pl_analysis['Overhead_Ratio'].mean() * 100
+                    st.info(f"**{avg_labor_eff:.2f}x** average labor efficiency")
+                    st.info(f"**{avg_tech_eff:.2f}x** average tech efficiency")
+                    st.info(f"**{avg_overhead:.1f}%** average overhead ratio")
+                
+                with col2:
+                    st.markdown("#### 🏆 Top Performers")
+                    top_labor = pl_analysis.nlargest(1, 'Labor_Efficiency').iloc[0]
+                    top_tech = pl_analysis.nlargest(1, 'Tech_Efficiency').iloc[0]
+                    st.success(f"**Labor**: {top_labor['Client_Name']} ({top_labor['Labor_Efficiency']:.2f}x)")
+                    st.success(f"**Tech**: {top_tech['Client_Name']} ({top_tech['Tech_Efficiency']:.2f}x)")
+        else:
+            st.warning("P&L data is required for this analysis. Please upload data in the P&L Analysis tab.")
     
     # Advanced controls
     st.markdown("---")
