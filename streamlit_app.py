@@ -4394,6 +4394,68 @@ with main_tab8:
                 
                 st.plotly_chart(fig_scores, use_container_width=True)
                 
+                # Business Case Promotion System
+                st.markdown("---")
+                st.markdown("##### 🚀 Promote Business Cases to Pipeline")
+                
+                # Filter cases that qualify for parking lot (score >= 70)
+                qualified_cases = scores_df[scores_df['Total_Score'] >= 70]
+                
+                if len(qualified_cases) > 0:
+                    st.success(f"🎯 {len(qualified_cases)} business cases qualify for the pipeline (score ≥ 70)")
+                    
+                    # Check which cases are not already in pipeline stages
+                    existing_parking_ids = [case.get('Case_ID', case.get('Case_Name', '')) for case in st.session_state.parking_lot]
+                    existing_backlog_ids = [case.get('Case_ID', case.get('Case_Name', '')) for case in st.session_state.backlog]  
+                    existing_roadmap_ids = [case.get('Case_ID', case.get('Case_Name', '')) for case in st.session_state.roadmap]
+                    
+                    new_qualified_cases = []
+                    for _, case in qualified_cases.iterrows():
+                        case_id = case.get('Case_ID', case.get('Case_Title', case.get('Case_Name', 'Unknown')))
+                        if (case_id not in existing_parking_ids and 
+                            case_id not in existing_backlog_ids and 
+                            case_id not in existing_roadmap_ids):
+                            new_qualified_cases.append(case)
+                    
+                    if len(new_qualified_cases) > 0:
+                        st.info(f"📋 {len(new_qualified_cases)} new cases ready for promotion to Parking Lot")
+                        
+                        promote_col1, promote_col2 = st.columns([2, 1])
+                        
+                        with promote_col1:
+                            st.markdown("**Cases Ready for Promotion:**")
+                            for case in new_qualified_cases:
+                                case_name = case.get('Case_Title', case.get('Case_Name', 'Unknown Case'))
+                                st.write(f"• **{case_name}** - Score: {case.get('Total_Score', 0):.1f}/100")
+                        
+                        with promote_col2:
+                            if st.button("🚀 Promote All to Parking Lot", type="primary"):
+                                for case in new_qualified_cases:
+                                    # Create parking lot item
+                                    parking_item = {
+                                        'Case_ID': case.get('Case_ID', case.get('Case_Title', 'Unknown')),
+                                        'Case_Name': case.get('Case_Title', case.get('Case_Name', 'Unknown Case')),
+                                        'Total_Score': case.get('Total_Score', 0),
+                                        'Investment_Required_M': case.get('Investment_Required_M', 
+                                                                        case.get('investment', 
+                                                                               case.get('Estimated_Investment_USD', 0))),
+                                        'Primary_Workstream': case.get('Primary_Workstream', 'N/A'),
+                                        'Target_Region': case.get('Target_Region', case.get('Region', 'Global')),
+                                        'ROI_Percentage': case.get('ROI_Percentage', 0),
+                                        'Implementation_Timeline': case.get('Implementation_Duration_Months', 'TBD'),
+                                        'Status': 'Parking Lot',
+                                        'Date_Added': datetime.now().strftime('%Y-%m-%d %H:%M')
+                                    }
+                                    
+                                    st.session_state.parking_lot.append(parking_item)
+                                
+                                st.success(f"✅ Promoted {len(new_qualified_cases)} cases to Parking Lot!")
+                                st.rerun()
+                    else:
+                        st.info("✅ All qualified cases are already in the pipeline stages.")
+                else:
+                    st.warning("⚠️ No business cases currently qualify for the pipeline (need score ≥ 70)")
+                
                 # Gap analysis for top cases
                 st.markdown("##### Gap Analysis - Top Performing Cases")
                 top_cases = scores_df.nlargest(5, 'Total_Score')
