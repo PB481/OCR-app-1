@@ -857,7 +857,66 @@ def create_business_case_template():
         'Target_FTE_Count': [4, 5, 4, 2, 6]  # Optimized FTE targets
     }
     
-    return pd.DataFrame(template_data)
+    # Create the main template DataFrame
+    template_df = pd.DataFrame(template_data)
+    
+    # Add detailed example and calculation guide as additional sheets/rows
+    example_case = pd.DataFrame({
+        'Case_ID': ['EXAMPLE_CASE'],
+        'Case_Title': ['📊 EXAMPLE: Digital Trade Processing Platform'],
+        'Business_Owner': ['Example: Sarah Johnson'],
+        'Region': ['Global'],
+        'Priority_Level': ['High'],
+        'Request_Date': ['2024-03-15'],
+        
+        # Financial - Designed to score ~85/100 in Financial category
+        'Estimated_Investment_USD': [3000000],  # $3M investment
+        'Expected_Annual_Savings_USD': [1800000],  # $1.8M annual savings  
+        'Implementation_Duration_Months': [15],
+        'ROI_Percentage': [60.0],  # High ROI: 60% scores 10/10 → Financial component: (10*0.6) = 6
+        'Payback_Period_Months': [20],  # Good payback: 20mo scores 6.7/10 → Financial component: (6.7*0.4) = 2.7
+        # Total Financial Score: (6 + 2.7) = 8.7/10 → Weighted: 8.7 * 30% = 2.61 points
+        
+        # Strategic - Designed to score ~90/100 
+        'Strategic_Alignment_Score': [9.5],  # Excellent strategic fit → (9.5*0.7) = 6.65
+        'Technology_Complexity_Score': [3],  # Low complexity scores high in feasibility 
+        'Implementation_Risk_Score': [2],  # Very low risk
+        'Client_Impact_Score': [9.0],  # High client impact → (9.0*0.3) = 2.7  
+        'Regulatory_Impact_Score': [8],
+        # Total Strategic Score: (6.65 + 2.7) = 9.35/10 → Weighted: 9.35 * 25% = 2.34 points
+        
+        # Resource Requirements
+        'FTE_Required': [8],
+        'External_Vendor_Required': ['Yes'],
+        'Technology_Investment_Percent': [70],
+        'Change_Management_Effort': ['Medium'],
+        
+        # Business Justification  
+        'Problem_Statement': ['Current trade processing requires 48 hours with 8% error rate, causing client dissatisfaction and regulatory concerns. Manual processes consume 15 FTE and limit scalability for growth.'],
+        'Proposed_Solution': ['Implement AI-powered digital trade processing platform with real-time validation, automated workflow routing, and integrated regulatory reporting capabilities.'],
+        'Expected_Benefits': ['Reduce processing time to 2 hours (96% improvement), decrease error rate to 0.5% (94% reduction), improve client satisfaction from 6.5 to 9.0, reduce FTE requirement by 60%.'],
+        
+        # Current vs Target State - Designed for strong gap analysis
+        'Current_Process_Efficiency': [3],  # Low current efficiency
+        'Current_Error_Rate_Percent': [8],  # High current error rate
+        'Current_Client_Satisfaction': [6.5],  # Moderate satisfaction
+        'Current_FTE_Count': [15],  # High current staffing
+        
+        'Target_Process_Efficiency': [9],  # High target: Gap = 6 points → Impact score component
+        'Target_Error_Rate_Percent': [0.5],  # Low target: Gap = 7.5% reduction → Impact score component  
+        'Target_Client_Satisfaction': [9.0],  # High target: Gap = 2.5 points improvement
+        'Target_FTE_Count': [6]  # Optimized: Gap = 9 FTE reduction → Resource score = 9*2 = 18 (capped at 10)
+        # Impact Score: ((6*0.6) + (7.5*0.4)) = 6.6/10 → Weighted: 6.6 * 15% = 0.99 points
+        # Resource Score: 10/10 → Weighted: 10 * 10% = 1.0 points
+        # Feasibility Score: ((10-3)/10*10*0.5) + ((10-2)/10*10*0.5) = (3.5 + 4.0) = 7.5/10 → Weighted: 7.5 * 20% = 1.5 points
+        
+        # TOTAL EXAMPLE SCORE: 2.61 + 2.34 + 1.5 + 0.99 + 1.0 = 8.44/10 = 84.4/100 ✅ QUALIFIES FOR PARKING LOT
+    })
+    
+    # Combine template with example
+    full_template = pd.concat([template_df, example_case], ignore_index=True)
+    
+    return full_template
 
 def load_business_case_data(uploaded_file):
     """Load and validate business case data from uploaded file."""
@@ -4227,7 +4286,50 @@ with main_tab8:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
-            st.info("💡 **Template includes:** Financial metrics, strategic alignment scores, implementation details, and current vs target state analysis fields.")
+            st.info("💡 **Template includes:** Financial metrics, strategic alignment scores, implementation details, current vs target state analysis fields, plus detailed example with score calculations.")
+            
+            # Template contents explanation
+            with st.expander("📋 What's in the Template", expanded=False):
+                st.markdown("""
+                ### 📊 **Template Contents**
+                
+                **5 Sample Business Cases** - Pre-filled examples optimized to score ≥70 for parking lot qualification
+                
+                **1 Detailed Example Case** - Step-by-step scoring calculation showing:
+                - How each field contributes to the final score
+                - Detailed comments explaining the scoring formulas
+                - Example scoring: **84.4/100** ✅ **Qualifies for Parking Lot**
+                
+                ### 🧮 **Scoring Breakdown Example:**
+                
+                **Financial Score (30% weight):**
+                - ROI: 60% → 10/10 points → (10 × 0.6) = 6.0
+                - Payback: 20 months → 6.7/10 points → (6.7 × 0.4) = 2.7
+                - **Total Financial: 8.7/10 → Weighted: 8.7 × 30% = 2.61 points**
+                
+                **Strategic Score (25% weight):**
+                - Strategic Alignment: 9.5 → (9.5 × 0.7) = 6.65
+                - Client Impact: 9.0 → (9.0 × 0.3) = 2.7  
+                - **Total Strategic: 9.35/10 → Weighted: 9.35 × 25% = 2.34 points**
+                
+                **Feasibility Score (20% weight):**
+                - Low Complexity (3) + Low Risk (2) = High Feasibility
+                - **Total Feasibility: 7.5/10 → Weighted: 7.5 × 20% = 1.5 points**
+                
+                **Impact Score (15% weight):**
+                - Process Efficiency Gap: 6 points improvement
+                - Error Rate Reduction: 7.5% improvement
+                - **Total Impact: 6.6/10 → Weighted: 6.6 × 15% = 0.99 points**
+                
+                **Resource Score (10% weight):**
+                - FTE Reduction: 9 staff reduction
+                - **Total Resource: 10/10 → Weighted: 10 × 10% = 1.0 points**
+                
+                ### 🎯 **Final Score Calculation:**
+                **2.61 + 2.34 + 1.5 + 0.99 + 1.0 = 8.44/10 = 84.4/100**
+                
+                ✅ **Result: Qualifies for Parking Lot** (≥70 threshold)
+                """)
         
         with col2:
             st.markdown("##### 📤 Upload Business Case Data")
