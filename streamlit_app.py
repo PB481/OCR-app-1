@@ -780,7 +780,11 @@ def generate_competitors_excel_report(df, insights):
 
 # Business Case Development Functions
 def create_business_case_template():
-    """Create a comprehensive business case template."""
+    """Create a comprehensive business case template with qualifying examples.
+    
+    Template includes 5 sample business cases optimized to meet the ≥70 score 
+    threshold for automatic promotion to the Parking Lot stage.
+    """
     
     template_data = {
         # Project Information
@@ -797,19 +801,19 @@ def create_business_case_template():
         'Priority_Level': ['High', 'Medium', 'High', 'Low', 'Medium'],
         'Request_Date': ['2024-01-15', '2024-02-01', '2024-01-30', '2024-02-15', '2024-03-01'],
         
-        # Financial Information
+        # Financial Information - Optimized for high scores
         'Estimated_Investment_USD': [2500000, 1800000, 3200000, 950000, 4500000],
-        'Expected_Annual_Savings_USD': [800000, 600000, 1200000, 400000, 1500000],
+        'Expected_Annual_Savings_USD': [1200000, 900000, 1600000, 600000, 2200000],  # Increased savings
         'Implementation_Duration_Months': [18, 12, 24, 8, 36],
-        'ROI_Percentage': [32.0, 33.3, 37.5, 42.1, 33.3],
-        'Payback_Period_Months': [37, 36, 32, 28, 36],
+        'ROI_Percentage': [48.0, 50.0, 50.0, 63.2, 48.9],  # Higher ROI for better Financial scores
+        'Payback_Period_Months': [25, 24, 24, 19, 24],  # Shorter payback periods
         
-        # Strategic Alignment
-        'Strategic_Alignment_Score': [8.5, 7.2, 9.1, 6.8, 8.0],
-        'Technology_Complexity_Score': [8, 6, 9, 4, 7],
-        'Implementation_Risk_Score': [7, 5, 8, 3, 6],
-        'Client_Impact_Score': [9, 8, 10, 5, 7],
-        'Regulatory_Impact_Score': [9, 10, 6, 7, 5],
+        # Strategic Alignment - Enhanced for qualification
+        'Strategic_Alignment_Score': [9.2, 8.8, 9.5, 8.5, 9.0],  # Higher strategic alignment
+        'Technology_Complexity_Score': [6, 4, 7, 3, 5],  # Lower complexity scores higher
+        'Implementation_Risk_Score': [5, 3, 6, 2, 4],  # Lower risk scores higher  
+        'Client_Impact_Score': [9.5, 9.0, 9.8, 8.5, 9.2],  # High client impact
+        'Regulatory_Impact_Score': [9, 10, 8, 9, 8],
         
         # Resource Requirements
         'FTE_Required': [12, 8, 15, 4, 20],
@@ -840,17 +844,17 @@ def create_business_case_template():
             'Reduce infrastructure costs by 30%, improve system availability to 99.9%'
         ],
         
-        # Current State Analysis
-        'Current_Process_Efficiency': [3, 4, 2, 4, 3],
-        'Current_Error_Rate_Percent': [12, 8, 25, 15, 10],
-        'Current_Client_Satisfaction': [6.2, 7.1, 2.3, 6.8, 7.0],
-        'Current_FTE_Count': [8, 15, 5, 6, 12],
+        # Current State Analysis - Designed for strong gap analysis
+        'Current_Process_Efficiency': [4, 5, 3, 5, 4],  # Moderate current efficiency
+        'Current_Error_Rate_Percent': [8, 6, 15, 10, 7],  # Reduced current error rates
+        'Current_Client_Satisfaction': [6.8, 7.5, 4.2, 7.0, 7.2],  # Improved baseline satisfaction
+        'Current_FTE_Count': [10, 12, 8, 6, 15],  # Current staffing levels
         
-        # Target State Goals
-        'Target_Process_Efficiency': [9, 8, 9, 8, 8],
-        'Target_Error_Rate_Percent': [0.1, 0.5, 1.0, 2.0, 0.5],
-        'Target_Client_Satisfaction': [8.5, 8.0, 8.5, 7.5, 8.2],
-        'Target_FTE_Count': [3, 6, 8, 1.5, 8]
+        # Target State Goals - Ambitious but achievable targets
+        'Target_Process_Efficiency': [9, 9, 9, 9, 9],  # High target efficiency
+        'Target_Error_Rate_Percent': [0.5, 0.2, 1.0, 1.0, 0.3],  # Low target error rates  
+        'Target_Client_Satisfaction': [9.0, 8.8, 8.5, 8.2, 8.7],  # High target satisfaction
+        'Target_FTE_Count': [4, 5, 4, 2, 6]  # Optimized FTE targets
     }
     
     return pd.DataFrame(template_data)

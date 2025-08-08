@@ -1,0 +1,36 @@
+{
+  "name": "Fund Administration Platform",
+  "description": "Operational Workstreams Management Platform for Fund Administration",
+  "repository": "https://github.com/yourusername/OCR-app-1",
+  "keywords": ["streamlit", "python", "finance", "fund-administration"],
+  "env": {
+    "STREAMLIT_SERVER_PORT": {
+      "description": "Port for Streamlit server",
+      "value": "8501"
+    },
+    "STREAMLIT_SERVER_ADDRESS": {
+      "description": "Server address",
+      "value": "0.0.0.0"
+    },
+    "STREAMLIT_BROWSER_GATHER_USAGE_STATS": {
+      "description": "Disable usage stats",
+      "value": "false"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "addons": [
+    {
+      "plan": "heroku-redis:hobby-dev"
+    }
+  ]
+} 
