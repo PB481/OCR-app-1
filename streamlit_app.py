@@ -72,6 +72,12 @@ if 'pl_data' not in st.session_state:
 if 'pl_template_downloaded' not in st.session_state:
     st.session_state.pl_template_downloaded = False
 
+# Initialize session state for Competitors Analysis
+if 'competitors_data' not in st.session_state:
+    st.session_state.competitors_data = pd.DataFrame()
+if 'competitors_template_downloaded' not in st.session_state:
+    st.session_state.competitors_template_downloaded = False
+
 @st.cache_data
 def load_capital_project_data(uploaded_file: io.BytesIO) -> pd.DataFrame:
     """
@@ -468,6 +474,295 @@ def generate_pl_excel_report(df, summary_stats):
         # Write profitability ranking
         profitability_ranking = df[['Client_Name', 'Fund_Name', 'Gross_Profit', 'Gross_Margin_Percent']].sort_values('Gross_Margin_Percent', ascending=False)
         profitability_ranking.to_excel(writer, sheet_name='Profitability_Ranking', index=False)
+    
+    return output.getvalue()
+
+# Competitors Analysis Functions
+def create_competitors_template():
+    """Create a comprehensive competitors analysis template."""
+    
+    template_data = {
+        # Competitor Information
+        'Competitor_Name': [
+            'State Street', 'JPMorgan Chase', 'BNY Mellon', 'HSBC', 'Citi',
+            'Northern Trust', 'Deutsche Bank', 'Credit Suisse', 'UBS', 'Goldman Sachs'
+        ],
+        'Competitor_Type': [
+            'Custody Bank', 'Universal Bank', 'Custody Bank', 'Universal Bank', 'Universal Bank',
+            'Custody Bank', 'Universal Bank', 'Universal Bank', 'Universal Bank', 'Investment Bank'
+        ],
+        'Market_Cap_USD_Billions': [65.2, 460.3, 45.8, 130.7, 102.5, 18.9, 15.2, 8.1, 55.4, 118.3],
+        'Headquarters': [
+            'Boston, USA', 'New York, USA', 'New York, USA', 'London, UK', 'New York, USA',
+            'Chicago, USA', 'Frankfurt, Germany', 'Zurich, Switzerland', 'Zurich, Switzerland', 'New York, USA'
+        ],
+        'Founded_Year': [1792, 1799, 1784, 1865, 1812, 1889, 1870, 1856, 1862, 1869],
+        
+        # Fund Administration Metrics
+        'Assets_Under_Administration_USD_Trillions': [40.0, 30.0, 46.7, 4.9, 22.0, 15.8, 1.4, 1.8, 4.4, 2.8],
+        'Number_of_Funds_Administered': [15000, 8000, 18000, 3500, 7500, 6000, 1200, 1800, 2800, 2200],
+        'Fund_Accounting_Clients': [2800, 1500, 3200, 800, 1600, 1200, 300, 450, 650, 480],
+        'Transfer_Agency_Services': ['Yes', 'Yes', 'Yes', 'Limited', 'Yes', 'Yes', 'No', 'Limited', 'Limited', 'No'],
+        'Regulatory_Reporting_Automation': ['High', 'High', 'High', 'Medium', 'High', 'Medium', 'Low', 'Medium', 'Medium', 'Low'],
+        
+        # Technology & Innovation
+        'Cloud_Native_Platform': ['Yes', 'Partial', 'Yes', 'No', 'Partial', 'Yes', 'No', 'No', 'Partial', 'No'],
+        'AI_ML_Capabilities': ['Advanced', 'Advanced', 'Intermediate', 'Basic', 'Advanced', 'Intermediate', 'Basic', 'Basic', 'Intermediate', 'Advanced'],
+        'API_Integration_Score': [9, 8, 9, 6, 8, 7, 5, 6, 7, 8],
+        'Digital_Transformation_Stage': ['Leader', 'Leader', 'Leader', 'Follower', 'Leader', 'Challenger', 'Follower', 'Follower', 'Challenger', 'Leader'],
+        'Blockchain_Capabilities': ['Yes', 'Yes', 'Limited', 'No', 'Yes', 'Limited', 'No', 'Limited', 'Yes', 'Yes'],
+        
+        # Market Position & Strategy
+        'Market_Share_Percent': [18.5, 14.2, 22.1, 2.3, 10.4, 7.5, 0.7, 0.9, 2.1, 1.3],
+        'Geographic_Presence': ['Global', 'Global', 'Global', 'Global', 'Global', 'US/Europe', 'Europe', 'Global', 'Global', 'Global'],
+        'Target_Client_Segment': ['Institutional', 'All', 'Institutional', 'All', 'All', 'Institutional', 'Institutional', 'UHNW/Institutional', 'UHNW/Institutional', 'Institutional'],
+        'Pricing_Strategy': ['Premium', 'Competitive', 'Premium', 'Competitive', 'Competitive', 'Premium', 'Competitive', 'Premium', 'Premium', 'Premium'],
+        'ESG_Focus_Score': [8.5, 7.8, 8.2, 7.1, 7.5, 8.0, 6.8, 7.3, 7.9, 8.1],
+        
+        # Operational Metrics
+        'Employee_Count': [39000, 271000, 48000, 220000, 240000, 22000, 82000, 45000, 72000, 45000],
+        'Revenue_USD_Billions': [12.2, 119.5, 16.2, 50.4, 75.3, 6.8, 28.8, 15.3, 34.7, 47.4],
+        'Technology_Investment_Percent': [15.2, 12.8, 16.1, 9.5, 13.4, 18.5, 8.2, 10.1, 11.7, 14.3],
+        'Client_Satisfaction_Score': [8.2, 7.1, 8.4, 7.3, 7.0, 8.6, 6.8, 7.5, 7.8, 7.2],
+        'Net_Promoter_Score': [42, 25, 48, 31, 22, 52, 18, 35, 39, 28],
+        
+        # Competitive Advantages & Disadvantages
+        'Key_Strengths': [
+            'Scale, Technology Innovation, Global Reach',
+            'Universal Banking, Capital, Brand Recognition',
+            'Custody Leadership, Client Service, Heritage',
+            'Global Network, Trade Finance, Emerging Markets',
+            'Universal Banking, Technology, Innovation',
+            'Client Service, Technology, Niche Focus',
+            'European Strength, Corporate Banking',
+            'Wealth Management, Swiss Heritage',
+            'Wealth Management, Global Presence',
+            'Investment Banking, Technology Innovation'
+        ],
+        'Key_Weaknesses': [
+            'Complex Structure, Regulatory Scrutiny',
+            'Regulatory Issues, Complexity',
+            'Technology Lag, Cost Structure',
+            'Regulatory Issues, Profitability',
+            'Regulatory Issues, Cost Structure',
+            'Scale Limitations, Geographic Reach',
+            'Profitability Issues, Limited Scale',
+            'Regulatory Issues, Limited Scale',
+            'Compliance Issues, Cost Structure',
+            'Limited Fund Admin Focus, Volatility'
+        ],
+        
+        # Recent Developments
+        'Recent_Acquisitions': [
+            'Brown Brothers Harriman Investor Services',
+            'Global Shares',
+            'Pershing Prime Services',
+            'None (Recent)',
+            'None (Recent)',
+            'UBS Asset Services',
+            'None (Recent)',
+            'None (Recent)',
+            'Wealthfront',
+            'NextCapital'
+        ],
+        'Technology_Initiatives': [
+            'State Street Alpha Platform',
+            'JPM Coin, Blockchain',
+            'BNY Mellon Digital',
+            'HSBC Digital Vault',
+            'Citi Cloud Platform',
+            'Northern Trust Edge',
+            'Deutsche Bank dbFlow',
+            'Credit Suisse Digital',
+            'UBS Neo',
+            'Goldman Sachs Digital'
+        ]
+    }
+    
+    return pd.DataFrame(template_data)
+
+def load_competitors_data(uploaded_file):
+    """Load and validate competitors data from uploaded file."""
+    try:
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
+        
+        # Basic validation
+        required_columns = ['Competitor_Name', 'Assets_Under_Administration_USD_Trillions', 'Market_Share_Percent']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            st.error(f"Missing required columns: {', '.join(missing_columns)}")
+            return pd.DataFrame()
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"Error loading file: {e}")
+        return pd.DataFrame()
+
+def create_competitive_positioning_chart(df):
+    """Create competitive positioning bubble chart."""
+    if df.empty:
+        return None
+    
+    fig = go.Figure()
+    
+    # Create bubble chart: Market Share vs Assets Under Administration
+    fig.add_trace(go.Scatter(
+        x=df['Assets_Under_Administration_USD_Trillions'],
+        y=df['Market_Share_Percent'],
+        mode='markers+text',
+        marker=dict(
+            size=df['Technology_Investment_Percent'] * 5,  # Size by tech investment
+            color=df['Client_Satisfaction_Score'],
+            colorscale='RdYlGn',
+            showscale=True,
+            colorbar=dict(title="Client Satisfaction"),
+            opacity=0.7,
+            line=dict(width=2, color='white')
+        ),
+        text=df['Competitor_Name'],
+        textposition="middle center",
+        hovertemplate='<b>%{text}</b><br>' +
+                     'AUA: $%{x:.1f}T<br>' +
+                     'Market Share: %{y:.1f}%<br>' +
+                     'Tech Investment: %{customdata[0]:.1f}%<br>' +
+                     'Client Satisfaction: %{customdata[1]:.1f}/10<br>' +
+                     'NPS: %{customdata[2]}<br>' +
+                     '<extra></extra>',
+        customdata=list(zip(df['Technology_Investment_Percent'], 
+                           df['Client_Satisfaction_Score'],
+                           df['Net_Promoter_Score']))
+    ))
+    
+    fig.update_layout(
+        title="Competitive Positioning: Assets Under Administration vs Market Share",
+        xaxis_title="Assets Under Administration (USD Trillions)",
+        yaxis_title="Market Share (%)",
+        height=600,
+        hovermode='closest'
+    )
+    
+    return fig
+
+def create_technology_capability_radar(df):
+    """Create technology capability radar chart for top competitors."""
+    if df.empty:
+        return None
+    
+    # Select top 5 competitors by AUA
+    top_competitors = df.nlargest(5, 'Assets_Under_Administration_USD_Trillions')
+    
+    fig = go.Figure()
+    
+    # Technology metrics for radar chart
+    tech_metrics = ['API_Integration_Score', 'Technology_Investment_Percent', 'Client_Satisfaction_Score']
+    
+    for _, competitor in top_competitors.iterrows():
+        values = [
+            competitor['API_Integration_Score'],
+            competitor['Technology_Investment_Percent'],
+            competitor['Client_Satisfaction_Score']
+        ]
+        
+        fig.add_trace(go.Scatterpolar(
+            r=values,
+            theta=['API Integration (1-10)', 'Tech Investment (%)', 'Client Satisfaction (1-10)'],
+            fill='toself',
+            name=competitor['Competitor_Name'],
+            opacity=0.7
+        ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 20])
+        ),
+        title="Technology Capabilities Comparison - Top 5 Competitors",
+        height=600
+    )
+    
+    return fig
+
+def create_market_evolution_analysis(df):
+    """Create market evolution and trend analysis."""
+    if df.empty:
+        return None
+    
+    # Categorize by digital transformation stage
+    stages = df['Digital_Transformation_Stage'].value_counts()
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            x=stages.index,
+            y=stages.values,
+            marker_color=['#2E8B57', '#4682B4', '#DAA520', '#DC143C'],
+            text=stages.values,
+            textposition='auto'
+        )
+    ])
+    
+    fig.update_layout(
+        title="Digital Transformation Maturity Distribution",
+        xaxis_title="Transformation Stage",
+        yaxis_title="Number of Competitors",
+        height=400
+    )
+    
+    return fig
+
+def generate_competitive_insights(df):
+    """Generate strategic competitive insights."""
+    if df.empty:
+        return {}
+    
+    insights = {}
+    
+    # Market concentration
+    top_3_share = df.nlargest(3, 'Market_Share_Percent')['Market_Share_Percent'].sum()
+    insights['market_concentration'] = f"Top 3 players control {top_3_share:.1f}% of market"
+    
+    # Technology leaders
+    tech_leaders = df[df['AI_ML_Capabilities'] == 'Advanced']['Competitor_Name'].tolist()
+    insights['tech_leaders'] = f"AI/ML Leaders: {', '.join(tech_leaders)}"
+    
+    # Client satisfaction winners
+    top_satisfaction = df.nlargest(3, 'Client_Satisfaction_Score')
+    insights['satisfaction_leaders'] = top_satisfaction[['Competitor_Name', 'Client_Satisfaction_Score']].to_dict('records')
+    
+    # Geographic diversification
+    global_players = len(df[df['Geographic_Presence'] == 'Global'])
+    insights['geographic_reach'] = f"{global_players} competitors have global presence"
+    
+    # Innovation focus
+    cloud_native = len(df[df['Cloud_Native_Platform'] == 'Yes'])
+    insights['cloud_adoption'] = f"{cloud_native}/{len(df)} competitors are cloud-native"
+    
+    return insights
+
+def generate_competitors_excel_report(df, insights):
+    """Generate comprehensive competitors analysis Excel report."""
+    output = io.BytesIO()
+    
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Main competitor data
+        df.to_excel(writer, sheet_name='Competitor_Analysis', index=False)
+        
+        # Market positioning data
+        positioning_df = df[['Competitor_Name', 'Market_Share_Percent', 'Assets_Under_Administration_USD_Trillions', 
+                           'Technology_Investment_Percent', 'Client_Satisfaction_Score']].copy()
+        positioning_df.to_excel(writer, sheet_name='Market_Positioning', index=False)
+        
+        # Technology comparison
+        tech_df = df[['Competitor_Name', 'AI_ML_Capabilities', 'API_Integration_Score', 'Cloud_Native_Platform', 
+                     'Digital_Transformation_Stage']].copy()
+        tech_df.to_excel(writer, sheet_name='Technology_Analysis', index=False)
+        
+        # Strategic insights
+        insights_df = pd.DataFrame.from_dict(insights, orient='index', columns=['Insight'])
+        insights_df.to_excel(writer, sheet_name='Strategic_Insights')
     
     return output.getvalue()
 
@@ -1938,13 +2233,14 @@ This application provides a comprehensive view of fund administration operationa
 """)
 
 # Create tabs for different sections
-main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
+main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6, main_tab7 = st.tabs([
     "🧪 Workstream Views",
     "📊 3D Analysis", 
     "⚙️ Manage Workstreams",
     "💰 Capital Projects",
     "📄 Source Code",
-    "💼 P&L Analysis"
+    "💼 P&L Analysis",
+    "🏆 Competitors Analysis"
 ])
 
 with main_tab1:
@@ -3045,6 +3341,346 @@ with main_tab6:
             # Sample data preview
             st.markdown("#### Template Data Structure")
             st.dataframe(template_preview.head(), use_container_width=True, hide_index=True)
+
+with main_tab7:
+    st.markdown("### 🏆 Fund Administration Competitors Analysis")
+    st.markdown("*Strategic competitive intelligence platform for analyzing major players in the Fund Administration and Custody services market.*")
+    
+    st.markdown("---")
+    
+    # Competitive Analysis Methodology
+    with st.expander("📋 Competitive Analysis Framework", expanded=False):
+        st.markdown("""
+        ### Strategic Competitive Intelligence Framework
+        
+        **Market Positioning Analysis:**
+        - Assets Under Administration vs Market Share positioning
+        - Technology investment correlation with client satisfaction
+        - Geographic presence and target client segment analysis
+        
+        **Technology Capability Assessment:**
+        - AI/ML capabilities maturity evaluation
+        - Cloud-native platform adoption analysis
+        - API integration and digital transformation readiness
+        - Blockchain and emerging technology implementation
+        
+        **Operational Excellence Benchmarking:**
+        - Client satisfaction and Net Promoter Score tracking
+        - Technology investment as percentage of revenue
+        - Employee count and operational efficiency ratios
+        - ESG focus and sustainability initiatives scoring
+        
+        **Strategic Intelligence Insights:**
+        - Market concentration and competitive dynamics
+        - Recent acquisitions and consolidation trends
+        - Technology initiatives and innovation investments
+        - Competitive strengths and vulnerability analysis
+        """)
+    
+    # Data Management Section
+    st.subheader("📂 Competitor Data Management")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 📥 Upload Competitors Data")
+        uploaded_competitors_file = st.file_uploader(
+            "Upload Competitors Data (Excel/CSV)", 
+            type=['xlsx', 'csv'], 
+            help="Upload your competitors analysis data file",
+            key="competitors_upload"
+        )
+        
+        if uploaded_competitors_file:
+            with st.spinner("Loading competitors data..."):
+                competitors_data = load_competitors_data(uploaded_competitors_file)
+                if not competitors_data.empty:
+                    st.session_state.competitors_data = competitors_data
+                    st.success(f"✅ Loaded {len(competitors_data)} competitors successfully!")
+    
+    with col2:
+        st.markdown("#### 📋 Download Template")
+        st.markdown("*Download the comprehensive competitors analysis template with sample data*")
+        
+        template_data = create_competitors_template()
+        template_excel = io.BytesIO()
+        
+        with pd.ExcelWriter(template_excel, engine='xlsxwriter') as writer:
+            template_data.to_excel(writer, sheet_name='Competitors_Template', index=False)
+            
+            # Add data dictionary
+            data_dict = pd.DataFrame({
+                'Field_Category': [
+                    'Basic Information', 'Basic Information', 'Fund Administration', 'Fund Administration', 
+                    'Technology', 'Technology', 'Market Position', 'Operational', 'Strategic'
+                ],
+                'Field_Name': [
+                    'Competitor_Name', 'Competitor_Type', 'Assets_Under_Administration_USD_Trillions', 
+                    'Number_of_Funds_Administered', 'AI_ML_Capabilities', 'API_Integration_Score',
+                    'Market_Share_Percent', 'Client_Satisfaction_Score', 'Key_Strengths'
+                ],
+                'Description': [
+                    'Official competitor name',
+                    'Bank category (Custody Bank, Universal Bank, etc.)',
+                    'Total assets under administration in trillions USD',
+                    'Total number of funds administered',
+                    'AI/ML maturity level (Advanced/Intermediate/Basic)',
+                    'API integration capability score (1-10)',
+                    'Market share percentage in fund administration',
+                    'Client satisfaction score (1-10)',
+                    'Key competitive strengths'
+                ],
+                'Data_Type': [
+                    'Text', 'Text', 'Number', 'Integer', 'Text', 'Integer', 'Number', 'Number', 'Text'
+                ]
+            })
+            data_dict.to_excel(writer, sheet_name='Data_Dictionary', index=False)
+        
+        template_excel.seek(0)
+        
+        st.download_button(
+            label="📋 Download Competitors Template",
+            data=template_excel.getvalue(),
+            file_name=f"Competitors_Analysis_Template_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    
+    st.markdown("---")
+    
+    # Analysis Dashboard
+    if not st.session_state.competitors_data.empty:
+        st.subheader("📊 Competitive Intelligence Dashboard")
+        
+        # Generate insights
+        with st.spinner("Analyzing competitive landscape..."):
+            competitive_insights = generate_competitive_insights(st.session_state.competitors_data)
+        
+        # Executive Summary
+        st.markdown("#### 🎯 Executive Summary")
+        
+        df_comp = st.session_state.competitors_data
+        total_competitors = len(df_comp)
+        total_aum = df_comp['Assets_Under_Administration_USD_Trillions'].sum()
+        avg_market_share = df_comp['Market_Share_Percent'].mean()
+        tech_leaders = len(df_comp[df_comp['AI_ML_Capabilities'] == 'Advanced'])
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Competitors", total_competitors)
+        with col2:
+            st.metric("Combined AUM", f"${total_aum:.1f}T")
+        with col3:
+            st.metric("Avg Market Share", f"{avg_market_share:.1f}%")
+        with col4:
+            st.metric("Tech Leaders", f"{tech_leaders} competitors")
+        
+        st.markdown("---")
+        
+        # Visualization Charts
+        chart_tab1, chart_tab2, chart_tab3, chart_tab4 = st.tabs([
+            "🎯 Market Positioning", 
+            "💻 Technology Analysis", 
+            "📈 Market Evolution",
+            "🔍 Strategic Insights"
+        ])
+        
+        with chart_tab1:
+            st.markdown("#### Competitive Positioning Map")
+            positioning_chart = create_competitive_positioning_chart(df_comp)
+            if positioning_chart:
+                st.plotly_chart(positioning_chart, use_container_width=True)
+                
+                # Market leaders analysis
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### 🏆 Market Leaders (by AUM)")
+                    top_aum = df_comp.nlargest(5, 'Assets_Under_Administration_USD_Trillions')[
+                        ['Competitor_Name', 'Assets_Under_Administration_USD_Trillions', 'Market_Share_Percent']
+                    ]
+                    st.dataframe(top_aum.style.format({
+                        'Assets_Under_Administration_USD_Trillions': '${:.1f}T',
+                        'Market_Share_Percent': '{:.1f}%'
+                    }), use_container_width=True, hide_index=True)
+                
+                with col2:
+                    st.markdown("#### 📊 Client Satisfaction Leaders")
+                    top_satisfaction = df_comp.nlargest(5, 'Client_Satisfaction_Score')[
+                        ['Competitor_Name', 'Client_Satisfaction_Score', 'Net_Promoter_Score']
+                    ]
+                    st.dataframe(top_satisfaction.style.format({
+                        'Client_Satisfaction_Score': '{:.1f}/10',
+                        'Net_Promoter_Score': '{:.0f}'
+                    }), use_container_width=True, hide_index=True)
+        
+        with chart_tab2:
+            st.markdown("#### Technology Capabilities Comparison")
+            tech_radar = create_technology_capability_radar(df_comp)
+            if tech_radar:
+                st.plotly_chart(tech_radar, use_container_width=True)
+                
+                # Technology breakdown
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### 🤖 AI/ML Capabilities")
+                    ai_breakdown = df_comp['AI_ML_Capabilities'].value_counts()
+                    for capability, count in ai_breakdown.items():
+                        st.info(f"**{capability}**: {count} competitors")
+                
+                with col2:
+                    st.markdown("#### ☁️ Cloud Adoption")
+                    cloud_breakdown = df_comp['Cloud_Native_Platform'].value_counts()
+                    for status, count in cloud_breakdown.items():
+                        color = "success" if status == "Yes" else "info" if status == "Partial" else "warning"
+                        if color == "success":
+                            st.success(f"**{status}**: {count} competitors")
+                        elif color == "info":
+                            st.info(f"**{status}**: {count} competitors")
+                        else:
+                            st.warning(f"**{status}**: {count} competitors")
+        
+        with chart_tab3:
+            st.markdown("#### Digital Transformation Maturity")
+            evolution_chart = create_market_evolution_analysis(df_comp)
+            if evolution_chart:
+                st.plotly_chart(evolution_chart, use_container_width=True)
+                
+                # Transformation insights
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### 🚀 Digital Leaders")
+                    leaders = df_comp[df_comp['Digital_Transformation_Stage'] == 'Leader']
+                    if not leaders.empty:
+                        for _, leader in leaders.iterrows():
+                            st.success(f"**{leader['Competitor_Name']}** - {leader['Technology_Initiatives']}")
+                
+                with col2:
+                    st.markdown("#### 📈 Investment Levels")
+                    avg_tech_investment = df_comp.groupby('Digital_Transformation_Stage')['Technology_Investment_Percent'].mean()
+                    for stage, investment in avg_tech_investment.items():
+                        st.info(f"**{stage}**: {investment:.1f}% avg tech investment")
+        
+        with chart_tab4:
+            st.markdown("#### Strategic Competitive Insights")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### 📈 Market Dynamics")
+                st.info(competitive_insights.get('market_concentration', 'N/A'))
+                st.info(competitive_insights.get('geographic_reach', 'N/A'))
+                st.info(competitive_insights.get('cloud_adoption', 'N/A'))
+                
+                # Recent acquisitions
+                st.markdown("#### 🤝 Recent Acquisitions")
+                recent_acquisitions = df_comp[df_comp['Recent_Acquisitions'] != 'None (Recent)'][
+                    ['Competitor_Name', 'Recent_Acquisitions']
+                ].head(5)
+                for _, row in recent_acquisitions.iterrows():
+                    st.success(f"**{row['Competitor_Name']}**: {row['Recent_Acquisitions']}")
+            
+            with col2:
+                st.markdown("#### 🏆 Performance Leaders")
+                st.info(competitive_insights.get('tech_leaders', 'N/A'))
+                
+                # Top performers by multiple metrics
+                st.markdown("#### 📊 Multi-Metric Leaders")
+                df_comp['overall_score'] = (
+                    df_comp['Client_Satisfaction_Score'] * 0.3 +
+                    df_comp['Technology_Investment_Percent'] * 0.3 +
+                    df_comp['API_Integration_Score'] * 0.4
+                )
+                top_overall = df_comp.nlargest(5, 'overall_score')[
+                    ['Competitor_Name', 'overall_score']
+                ]
+                for _, row in top_overall.iterrows():
+                    st.success(f"**{row['Competitor_Name']}**: {row['overall_score']:.1f} overall score")
+        
+        st.markdown("---")
+        
+        # Detailed Analysis Table
+        st.subheader("📋 Detailed Competitors Analysis")
+        
+        # Key columns for display
+        display_columns = [
+            'Competitor_Name', 'Competitor_Type', 'Assets_Under_Administration_USD_Trillions',
+            'Market_Share_Percent', 'Technology_Investment_Percent', 'Client_Satisfaction_Score',
+            'AI_ML_Capabilities', 'Digital_Transformation_Stage', 'Geographic_Presence'
+        ]
+        
+        display_df = df_comp[display_columns]
+        
+        st.dataframe(display_df.style.format({
+            'Assets_Under_Administration_USD_Trillions': '${:.1f}T',
+            'Market_Share_Percent': '{:.1f}%',
+            'Technology_Investment_Percent': '{:.1f}%',
+            'Client_Satisfaction_Score': '{:.1f}/10'
+        }), use_container_width=True, hide_index=True)
+        
+        st.markdown("---")
+        
+        # Export Analysis
+        st.subheader("📤 Export Competitive Analysis")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Generate comprehensive Excel report
+            excel_report = generate_competitors_excel_report(df_comp, competitive_insights)
+            
+            st.download_button(
+                label="📊 Download Complete Analysis",
+                data=excel_report,
+                file_name=f"Competitors_Analysis_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        
+        with col2:
+            # Export raw data
+            csv_data = df_comp.to_csv(index=False)
+            st.download_button(
+                label="📋 Download Raw Data (CSV)",
+                data=csv_data,
+                file_name=f"Competitors_Data_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+    
+    else:
+        # Show template preview
+        st.subheader("📋 Template Preview")
+        st.markdown("*Preview of the competitors analysis template with sample data. Upload your data to see full competitive intelligence.*")
+        
+        template_preview = create_competitors_template()
+        
+        if not template_preview.empty:
+            # Show sample visualizations with template data
+            st.session_state.competitors_data = template_preview  # Temporarily set for preview
+            positioning_chart = create_competitive_positioning_chart(template_preview)
+            tech_radar = create_technology_capability_radar(template_preview)
+            
+            st.markdown("#### Sample Competitive Positioning")
+            if positioning_chart:
+                st.plotly_chart(positioning_chart, use_container_width=True)
+            
+            # Sample metrics
+            sample_competitors = len(template_preview)
+            sample_aum = template_preview['Assets_Under_Administration_USD_Trillions'].sum()
+            sample_leaders = len(template_preview[template_preview['AI_ML_Capabilities'] == 'Advanced'])
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Sample Competitors", sample_competitors)
+            with col2:
+                st.metric("Sample AUM", f"${sample_aum:.1f}T")
+            with col3:
+                st.metric("Tech Leaders", sample_leaders)
+            
+            # Sample data structure
+            st.markdown("#### Template Data Structure")
+            st.dataframe(template_preview[['Competitor_Name', 'Assets_Under_Administration_USD_Trillions', 
+                                        'Market_Share_Percent', 'AI_ML_Capabilities', 'Client_Satisfaction_Score']].head(), 
+                        use_container_width=True, hide_index=True)
+            
+            st.session_state.competitors_data = pd.DataFrame()  # Reset after preview
 
 # Footer
 st.markdown("---")
