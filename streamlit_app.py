@@ -66,6 +66,12 @@ if 'comment_bottom5' not in st.session_state:
 if 'reports_ready' not in st.session_state:
     st.session_state.reports_ready = False
 
+# Initialize session state for P&L Analysis
+if 'pl_data' not in st.session_state:
+    st.session_state.pl_data = pd.DataFrame()
+if 'pl_template_downloaded' not in st.session_state:
+    st.session_state.pl_template_downloaded = False
+
 @st.cache_data
 def load_capital_project_data(uploaded_file: io.BytesIO) -> pd.DataFrame:
     """
@@ -203,6 +209,266 @@ def generate_capital_excel_report(metrics, filtered_df):
         summary_df = pd.DataFrame([metrics])
         summary_df.to_excel(writer, sheet_name='Summary', index=False)
         filtered_df.to_excel(writer, sheet_name='Project_Details', index=False)
+    return output.getvalue()
+
+# P&L Analysis Functions
+def create_pl_template():
+    """Create a comprehensive P&L template for Fund Admin/Accounting Product."""
+    
+    # Sample data structure for P&L analysis
+    template_data = {
+        # Client Information
+        'Client_Name': ['Global Asset Management', 'Private Equity Fund A', 'Hedge Fund Beta', 'Real Estate Fund C', 'Infrastructure Fund D'],
+        'Fund_Name': ['Global Equity Fund', 'PE Growth Fund', 'Long/Short Equity', 'Commercial RE Fund', 'Infrastructure Debt'],
+        'Fund_AUM_USD_Millions': [2500, 800, 1200, 600, 1500],
+        'Number_of_Funds': [15, 3, 8, 4, 6],
+        'Service_Start_Date': ['2023-01-01', '2023-03-15', '2022-11-01', '2024-01-01', '2023-06-01'],
+        
+        # Revenue Components
+        'Total_Annual_Revenue_USD': [750000, 240000, 380000, 180000, 450000],
+        'Fund_Accounting_Revenue_USD': [300000, 96000, 152000, 72000, 180000],
+        'Fund_Administration_Revenue_USD': [225000, 72000, 114000, 54000, 135000],
+        'Transfer_Agency_Revenue_USD': [150000, 48000, 76000, 36000, 90000],
+        'Regulatory_Reporting_Revenue_USD': [75000, 24000, 38000, 18000, 45000],
+        
+        # Rate Card Information
+        'Fund_Accounting_Rate_Per_Fund': [20000, 32000, 19000, 18000, 30000],
+        'Administration_Rate_Per_Fund': [15000, 24000, 14250, 13500, 22500],
+        'Transfer_Agency_Rate_Per_Investor': [150, 200, 127, 120, 188],
+        'Number_of_Investors': [1000, 240, 600, 300, 480],
+        
+        # Direct Labor Costs
+        'Fund_Accountants_Required': [3.0, 1.0, 2.0, 1.0, 2.0],
+        'Average_Accountant_Salary_USD': [85000, 85000, 85000, 85000, 85000],
+        'Fully_Burdened_Cost_Multiplier': [1.4, 1.4, 1.4, 1.4, 1.4],
+        'Senior_Manager_Time_Percent': [15, 20, 18, 25, 20],
+        'Manager_Hourly_Rate_USD': [150, 150, 150, 150, 150],
+        
+        # Operational Metrics
+        'Monthly_NAV_Calculations': [15, 3, 8, 4, 6],
+        'Investor_Transactions_Per_Month': [200, 50, 120, 60, 80],
+        'Change_Requests_Per_Month': [25, 8, 15, 6, 12],
+        'Regulatory_Reports_Per_Quarter': [12, 6, 9, 6, 8],
+        
+        # Technology & Infrastructure Costs
+        'Software_License_Cost_USD': [15000, 8000, 12000, 6000, 10000],
+        'Data_Provider_Costs_USD': [25000, 10000, 18000, 8000, 15000],
+        'Cloud_Infrastructure_USD': [8000, 3000, 5000, 2500, 4500],
+        
+        # Overhead Allocation Drivers
+        'Office_Space_Allocation_SqFt': [1200, 400, 800, 400, 600],
+        'Compliance_Hours_Per_Month': [40, 15, 25, 10, 20],
+        'Risk_Management_Hours_Per_Month': [30, 10, 20, 8, 15],
+        
+        # Quality & SLA Metrics
+        'NAV_Accuracy_Percentage': [99.95, 99.90, 99.93, 99.88, 99.92],
+        'On_Time_Delivery_Percentage': [98.5, 97.8, 98.2, 96.5, 97.9],
+        'Client_Satisfaction_Score': [4.8, 4.6, 4.7, 4.4, 4.5],
+        
+        # Additional Revenue Streams
+        'Ad_Hoc_Services_Revenue_USD': [25000, 8000, 15000, 5000, 12000],
+        'Training_Services_Revenue_USD': [5000, 2000, 3000, 1000, 2500],
+        'Consulting_Revenue_USD': [15000, 5000, 8000, 3000, 7000]
+    }
+    
+    return pd.DataFrame(template_data)
+
+def load_pl_data(uploaded_file):
+    """Load and validate P&L data from uploaded file."""
+    try:
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
+        
+        # Basic validation
+        required_columns = ['Client_Name', 'Fund_Name', 'Total_Annual_Revenue_USD', 'Fund_AUM_USD_Millions']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            st.error(f"Missing required columns: {', '.join(missing_columns)}")
+            return pd.DataFrame()
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"Error loading file: {e}")
+        return pd.DataFrame()
+
+def calculate_pl_metrics(df):
+    """Calculate comprehensive P&L metrics and allocations."""
+    if df.empty:
+        return pd.DataFrame()
+    
+    # Create a copy for calculations
+    df_calc = df.copy()
+    
+    # Calculate direct labor costs
+    df_calc['Total_Direct_Labor_Cost'] = (
+        df_calc['Fund_Accountants_Required'] * 
+        df_calc['Average_Accountant_Salary_USD'] * 
+        df_calc['Fully_Burdened_Cost_Multiplier']
+    )
+    
+    # Calculate manager oversight costs
+    df_calc['Manager_Oversight_Cost'] = (
+        df_calc['Senior_Manager_Time_Percent'] / 100 * 
+        df_calc['Manager_Hourly_Rate_USD'] * 
+        2080  # Annual hours
+    )
+    
+    # Calculate technology costs per client
+    df_calc['Total_Technology_Cost'] = (
+        df_calc['Software_License_Cost_USD'] + 
+        df_calc['Data_Provider_Costs_USD'] + 
+        df_calc['Cloud_Infrastructure_USD']
+    )
+    
+    # Calculate total direct costs
+    df_calc['Total_Direct_Costs'] = (
+        df_calc['Total_Direct_Labor_Cost'] + 
+        df_calc['Manager_Oversight_Cost'] + 
+        df_calc['Total_Technology_Cost']
+    )
+    
+    # Calculate overhead allocation (15% of total revenue as example)
+    df_calc['Overhead_Allocation'] = df_calc['Total_Annual_Revenue_USD'] * 0.15
+    
+    # Calculate total costs
+    df_calc['Total_Costs'] = df_calc['Total_Direct_Costs'] + df_calc['Overhead_Allocation']
+    
+    # Calculate profitability metrics
+    df_calc['Gross_Profit'] = df_calc['Total_Annual_Revenue_USD'] - df_calc['Total_Costs']
+    df_calc['Gross_Margin_Percent'] = (df_calc['Gross_Profit'] / df_calc['Total_Annual_Revenue_USD']) * 100
+    
+    # Calculate revenue per fund metrics
+    df_calc['Revenue_Per_Fund'] = df_calc['Total_Annual_Revenue_USD'] / df_calc['Number_of_Funds']
+    df_calc['Cost_Per_Fund'] = df_calc['Total_Costs'] / df_calc['Number_of_Funds']
+    df_calc['Profit_Per_Fund'] = df_calc['Gross_Profit'] / df_calc['Number_of_Funds']
+    
+    # Calculate AUM-based metrics
+    df_calc['Revenue_Per_AUM_BPS'] = (df_calc['Total_Annual_Revenue_USD'] / (df_calc['Fund_AUM_USD_Millions'] * 1000000)) * 10000
+    df_calc['Cost_Per_AUM_BPS'] = (df_calc['Total_Costs'] / (df_calc['Fund_AUM_USD_Millions'] * 1000000)) * 10000
+    
+    return df_calc
+
+def create_pl_summary_charts(df):
+    """Create comprehensive P&L visualization charts."""
+    if df.empty:
+        return None, None, None, None
+    
+    # Revenue breakdown chart
+    revenue_fig = go.Figure(data=[
+        go.Bar(name='Fund Accounting', x=df['Client_Name'], y=df['Fund_Accounting_Revenue_USD']),
+        go.Bar(name='Fund Administration', x=df['Client_Name'], y=df['Fund_Administration_Revenue_USD']),
+        go.Bar(name='Transfer Agency', x=df['Client_Name'], y=df['Transfer_Agency_Revenue_USD']),
+        go.Bar(name='Regulatory Reporting', x=df['Client_Name'], y=df['Regulatory_Reporting_Revenue_USD'])
+    ])
+    revenue_fig.update_layout(
+        title="Revenue Breakdown by Service Line",
+        barmode='stack',
+        xaxis_title="Client",
+        yaxis_title="Revenue (USD)",
+        height=500
+    )
+    
+    # Cost allocation chart
+    cost_fig = go.Figure(data=[
+        go.Bar(name='Direct Labor', x=df['Client_Name'], y=df['Total_Direct_Labor_Cost']),
+        go.Bar(name='Manager Oversight', x=df['Client_Name'], y=df['Manager_Oversight_Cost']),
+        go.Bar(name='Technology', x=df['Client_Name'], y=df['Total_Technology_Cost']),
+        go.Bar(name='Overhead', x=df['Client_Name'], y=df['Overhead_Allocation'])
+    ])
+    cost_fig.update_layout(
+        title="Cost Allocation by Category",
+        barmode='stack',
+        xaxis_title="Client",
+        yaxis_title="Cost (USD)",
+        height=500
+    )
+    
+    # Profitability analysis
+    profit_fig = go.Figure()
+    profit_fig.add_trace(go.Bar(
+        name='Revenue',
+        x=df['Client_Name'],
+        y=df['Total_Annual_Revenue_USD'],
+        marker_color='lightblue'
+    ))
+    profit_fig.add_trace(go.Bar(
+        name='Costs',
+        x=df['Client_Name'],
+        y=df['Total_Costs'],
+        marker_color='lightcoral'
+    ))
+    profit_fig.add_trace(go.Scatter(
+        name='Gross Margin %',
+        x=df['Client_Name'],
+        y=df['Gross_Margin_Percent'],
+        mode='lines+markers',
+        yaxis='y2',
+        line=dict(color='green', width=3),
+        marker=dict(size=8)
+    ))
+    profit_fig.update_layout(
+        title="Revenue vs Costs Analysis",
+        xaxis_title="Client",
+        yaxis_title="Amount (USD)",
+        yaxis2=dict(title="Gross Margin (%)", overlaying='y', side='right'),
+        height=500
+    )
+    
+    # AUM efficiency chart
+    aum_fig = go.Figure()
+    aum_fig.add_trace(go.Scatter(
+        x=df['Fund_AUM_USD_Millions'],
+        y=df['Revenue_Per_AUM_BPS'],
+        mode='markers',
+        marker=dict(
+            size=df['Number_of_Funds'] * 3,
+            color=df['Gross_Margin_Percent'],
+            colorscale='RdYlGn',
+            showscale=True,
+            colorbar=dict(title="Gross Margin %")
+        ),
+        text=df['Client_Name'],
+        hovertemplate='<b>%{text}</b><br>' +
+                      'AUM: $%{x}M<br>' +
+                      'Revenue per AUM: %{y:.1f} bps<br>' +
+                      '<extra></extra>'
+    ))
+    aum_fig.update_layout(
+        title="Revenue Efficiency: Revenue per AUM vs Total AUM",
+        xaxis_title="Fund AUM (USD Millions)",
+        yaxis_title="Revenue per AUM (Basis Points)",
+        height=500
+    )
+    
+    return revenue_fig, cost_fig, profit_fig, aum_fig
+
+def generate_pl_excel_report(df, summary_stats):
+    """Generate comprehensive P&L Excel report."""
+    output = io.BytesIO()
+    
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write main data
+        df.to_excel(writer, sheet_name='Detailed_PL_Analysis', index=False)
+        
+        # Write summary statistics
+        summary_df = pd.DataFrame([summary_stats])
+        summary_df.to_excel(writer, sheet_name='Executive_Summary', index=False)
+        
+        # Write service line breakdown
+        service_breakdown = df.groupby('Client_Name')[
+            ['Fund_Accounting_Revenue_USD', 'Fund_Administration_Revenue_USD', 
+             'Transfer_Agency_Revenue_USD', 'Regulatory_Reporting_Revenue_USD']
+        ].sum()
+        service_breakdown.to_excel(writer, sheet_name='Service_Line_Breakdown')
+        
+        # Write profitability ranking
+        profitability_ranking = df[['Client_Name', 'Fund_Name', 'Gross_Profit', 'Gross_Margin_Percent']].sort_values('Gross_Margin_Percent', ascending=False)
+        profitability_ranking.to_excel(writer, sheet_name='Profitability_Ranking', index=False)
+    
     return output.getvalue()
 
 def get_category_color(category):
@@ -1430,12 +1696,13 @@ This application provides a comprehensive view of fund administration operationa
 """)
 
 # Create tabs for different sections
-main_tab1, main_tab2, main_tab3, main_tab4, main_tab5 = st.tabs([
+main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
     "🧪 Workstream Views",
     "📊 3D Analysis", 
     "⚙️ Manage Workstreams",
     "💰 Capital Projects",
-    "📄 Source Code"
+    "📄 Source Code",
+    "💼 P&L Analysis"
 ])
 
 with main_tab1:
@@ -2049,6 +2316,334 @@ with main_tab5:
     - Professional Report Generation
     - HTML/Excel Export
     """)
+
+with main_tab6:
+    st.markdown("### 💼 Fund Administration P&L Analysis")
+    st.markdown("*Comprehensive Profit & Loss analysis for Fund Administration and Accounting Products using revenue attribution and cost allocation methodologies.*")
+    
+    st.markdown("---")
+    
+    # P&L Analysis Methodology Section
+    with st.expander("📋 P&L Analysis Methodology", expanded=False):
+        st.markdown("""
+        ### Core Methodology: Revenue Attribution & Cost Allocation
+        
+        **Revenue Attribution:**
+        - Uses client rate cards to break down total revenue into specific service lines
+        - Fund Accounting, Fund Administration, Transfer Agency, Regulatory Reporting
+        - Fixed fees allocated proportionally based on service notional values
+        
+        **Direct Cost Allocation:**
+        - **Labor Costs**: Fund Accountants per client/fund × average fully-burdened cost
+        - **Technology Costs**: Software licenses, data providers, cloud infrastructure
+        - **Manager Oversight**: Senior management time allocation based on complexity
+        
+        **Overhead Allocation:**
+        - Indirect costs allocated as percentage of direct costs or revenue
+        - Management salaries, office rent, compliance, risk management
+        - Proportional allocation based on headcount or revenue drivers
+        
+        **Key Metrics:**
+        - Revenue per AUM (basis points)
+        - Cost per Fund
+        - Gross Margin by Service Line
+        - Client Profitability Ranking
+        """)
+    
+    # Data Upload Section
+    st.subheader("📂 Data Management")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 📥 Upload P&L Data")
+        uploaded_pl_file = st.file_uploader(
+            "Upload P&L Data (Excel/CSV)", 
+            type=['xlsx', 'csv'], 
+            help="Upload your fund administration P&L data file",
+            key="pl_upload"
+        )
+        
+        if uploaded_pl_file:
+            with st.spinner("Loading P&L data..."):
+                pl_data = load_pl_data(uploaded_pl_file)
+                if not pl_data.empty:
+                    st.session_state.pl_data = pl_data
+                    st.success(f"✅ Loaded {len(pl_data)} records successfully!")
+    
+    with col2:
+        st.markdown("#### 📋 Download Template")
+        st.markdown("*Download the standardized P&L template with sample data*")
+        
+        template_data = create_pl_template()
+        template_excel = io.BytesIO()
+        
+        with pd.ExcelWriter(template_excel, engine='xlsxwriter') as writer:
+            template_data.to_excel(writer, sheet_name='PL_Template', index=False)
+            
+            # Add methodology sheet
+            methodology_df = pd.DataFrame({
+                'Field_Name': [
+                    'Client_Name', 'Fund_Name', 'Fund_AUM_USD_Millions', 'Total_Annual_Revenue_USD',
+                    'Fund_Accountants_Required', 'Average_Accountant_Salary_USD', 'Fully_Burdened_Cost_Multiplier',
+                    'Software_License_Cost_USD', 'Data_Provider_Costs_USD', 'Number_of_Funds'
+                ],
+                'Description': [
+                    'Client organization name',
+                    'Specific fund name',
+                    'Assets under management in millions USD',
+                    'Total annual revenue from client',
+                    'Number of fund accountants required',
+                    'Average accountant salary',
+                    'Multiplier for benefits/overhead (typically 1.3-1.5)',
+                    'Annual software licensing costs',
+                    'Annual data provider costs',
+                    'Number of funds managed for client'
+                ],
+                'Data_Type': [
+                    'Text', 'Text', 'Number', 'Number',
+                    'Number', 'Number', 'Number',
+                    'Number', 'Number', 'Integer'
+                ]
+            })
+            methodology_df.to_excel(writer, sheet_name='Data_Dictionary', index=False)
+        
+        template_excel.seek(0)
+        
+        st.download_button(
+            label="📋 Download P&L Template",
+            data=template_excel.getvalue(),
+            file_name=f"Fund_Admin_PL_Template_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    
+    st.markdown("---")
+    
+    # Analysis Section
+    if not st.session_state.pl_data.empty:
+        st.subheader("📊 P&L Analysis Dashboard")
+        
+        # Calculate comprehensive metrics
+        with st.spinner("Calculating P&L metrics..."):
+            pl_analysis = calculate_pl_metrics(st.session_state.pl_data)
+        
+        if not pl_analysis.empty:
+            # Executive Summary Metrics
+            st.markdown("#### 📈 Executive Summary")
+            
+            total_revenue = pl_analysis['Total_Annual_Revenue_USD'].sum()
+            total_costs = pl_analysis['Total_Costs'].sum()
+            total_profit = pl_analysis['Gross_Profit'].sum()
+            avg_margin = pl_analysis['Gross_Margin_Percent'].mean()
+            total_aum = pl_analysis['Fund_AUM_USD_Millions'].sum()
+            
+            col1, col2, col3, col4, col5 = st.columns(5)
+            
+            with col1:
+                st.metric("Total Revenue", f"${total_revenue:,.0f}")
+            with col2:
+                st.metric("Total Costs", f"${total_costs:,.0f}")
+            with col3:
+                st.metric("Total Profit", f"${total_profit:,.0f}")
+            with col4:
+                st.metric("Average Margin", f"{avg_margin:.1f}%")
+            with col5:
+                st.metric("Total AUM", f"${total_aum:,.0f}M")
+            
+            st.markdown("---")
+            
+            # Create visualization charts
+            revenue_chart, cost_chart, profit_chart, aum_chart = create_pl_summary_charts(pl_analysis)
+            
+            # Display charts in tabs
+            chart_tab1, chart_tab2, chart_tab3, chart_tab4 = st.tabs([
+                "📊 Revenue Breakdown", 
+                "💰 Cost Allocation", 
+                "📈 Profitability", 
+                "🎯 AUM Efficiency"
+            ])
+            
+            with chart_tab1:
+                st.plotly_chart(revenue_chart, use_container_width=True)
+                
+                # Service line summary
+                st.markdown("#### Service Line Performance")
+                service_summary = pd.DataFrame({
+                    'Service_Line': ['Fund Accounting', 'Fund Administration', 'Transfer Agency', 'Regulatory Reporting'],
+                    'Total_Revenue': [
+                        pl_analysis['Fund_Accounting_Revenue_USD'].sum(),
+                        pl_analysis['Fund_Administration_Revenue_USD'].sum(),
+                        pl_analysis['Transfer_Agency_Revenue_USD'].sum(),
+                        pl_analysis['Regulatory_Reporting_Revenue_USD'].sum()
+                    ]
+                })
+                service_summary['Percentage'] = (service_summary['Total_Revenue'] / service_summary['Total_Revenue'].sum()) * 100
+                st.dataframe(service_summary.style.format({
+                    'Total_Revenue': '${:,.0f}',
+                    'Percentage': '{:.1f}%'
+                }), use_container_width=True, hide_index=True)
+            
+            with chart_tab2:
+                st.plotly_chart(cost_chart, use_container_width=True)
+                
+                # Cost breakdown summary
+                st.markdown("#### Cost Category Analysis")
+                cost_summary = pd.DataFrame({
+                    'Cost_Category': ['Direct Labor', 'Manager Oversight', 'Technology', 'Overhead'],
+                    'Total_Cost': [
+                        pl_analysis['Total_Direct_Labor_Cost'].sum(),
+                        pl_analysis['Manager_Oversight_Cost'].sum(),
+                        pl_analysis['Total_Technology_Cost'].sum(),
+                        pl_analysis['Overhead_Allocation'].sum()
+                    ]
+                })
+                cost_summary['Percentage'] = (cost_summary['Total_Cost'] / cost_summary['Total_Cost'].sum()) * 100
+                st.dataframe(cost_summary.style.format({
+                    'Total_Cost': '${:,.0f}',
+                    'Percentage': '{:.1f}%'
+                }), use_container_width=True, hide_index=True)
+            
+            with chart_tab3:
+                st.plotly_chart(profit_chart, use_container_width=True)
+                
+                # Top and bottom performers
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("#### 🏆 Top Performers")
+                    top_performers = pl_analysis.nlargest(3, 'Gross_Margin_Percent')[
+                        ['Client_Name', 'Fund_Name', 'Gross_Margin_Percent', 'Gross_Profit']
+                    ]
+                    st.dataframe(top_performers.style.format({
+                        'Gross_Margin_Percent': '{:.1f}%',
+                        'Gross_Profit': '${:,.0f}'
+                    }), use_container_width=True, hide_index=True)
+                
+                with col2:
+                    st.markdown("#### 📉 Improvement Opportunities")
+                    bottom_performers = pl_analysis.nsmallest(3, 'Gross_Margin_Percent')[
+                        ['Client_Name', 'Fund_Name', 'Gross_Margin_Percent', 'Gross_Profit']
+                    ]
+                    st.dataframe(bottom_performers.style.format({
+                        'Gross_Margin_Percent': '{:.1f}%',
+                        'Gross_Profit': '${:,.0f}'
+                    }), use_container_width=True, hide_index=True)
+            
+            with chart_tab4:
+                st.plotly_chart(aum_chart, use_container_width=True)
+                
+                # AUM efficiency metrics
+                st.markdown("#### AUM-Based Efficiency Metrics")
+                efficiency_metrics = pl_analysis[
+                    ['Client_Name', 'Fund_AUM_USD_Millions', 'Revenue_Per_AUM_BPS', 'Cost_Per_AUM_BPS']
+                ].sort_values('Revenue_Per_AUM_BPS', ascending=False)
+                
+                st.dataframe(efficiency_metrics.style.format({
+                    'Fund_AUM_USD_Millions': '${:,.0f}M',
+                    'Revenue_Per_AUM_BPS': '{:.1f} bps',
+                    'Cost_Per_AUM_BPS': '{:.1f} bps'
+                }), use_container_width=True, hide_index=True)
+            
+            st.markdown("---")
+            
+            # Detailed Data Table
+            st.subheader("📋 Detailed P&L Analysis")
+            
+            # Key columns for display
+            display_columns = [
+                'Client_Name', 'Fund_Name', 'Fund_AUM_USD_Millions', 'Number_of_Funds',
+                'Total_Annual_Revenue_USD', 'Total_Costs', 'Gross_Profit', 'Gross_Margin_Percent',
+                'Revenue_Per_Fund', 'Cost_Per_Fund', 'Revenue_Per_AUM_BPS'
+            ]
+            
+            display_df = pl_analysis[display_columns]
+            
+            st.dataframe(display_df.style.format({
+                'Fund_AUM_USD_Millions': '${:,.0f}M',
+                'Total_Annual_Revenue_USD': '${:,.0f}',
+                'Total_Costs': '${:,.0f}',
+                'Gross_Profit': '${:,.0f}',
+                'Gross_Margin_Percent': '{:.1f}%',
+                'Revenue_Per_Fund': '${:,.0f}',
+                'Cost_Per_Fund': '${:,.0f}',
+                'Revenue_Per_AUM_BPS': '{:.1f} bps'
+            }), use_container_width=True, hide_index=True)
+            
+            st.markdown("---")
+            
+            # Export Section
+            st.subheader("📤 Export Analysis")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Summary statistics for export
+                summary_stats = {
+                    'Total_Revenue': total_revenue,
+                    'Total_Costs': total_costs,
+                    'Total_Profit': total_profit,
+                    'Average_Margin_Percent': avg_margin,
+                    'Total_AUM_Millions': total_aum,
+                    'Number_of_Clients': len(pl_analysis),
+                    'Analysis_Date': datetime.now().strftime('%Y-%m-%d')
+                }
+                
+                # Generate Excel report
+                excel_report = generate_pl_excel_report(pl_analysis, summary_stats)
+                
+                st.download_button(
+                    label="📊 Download Complete P&L Analysis",
+                    data=excel_report,
+                    file_name=f"Fund_Admin_PL_Analysis_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            
+            with col2:
+                # Export filtered data
+                csv_data = pl_analysis.to_csv(index=False)
+                st.download_button(
+                    label="📋 Download Raw Data (CSV)",
+                    data=csv_data,
+                    file_name=f"PL_Raw_Data_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
+                )
+    
+    else:
+        # Show template data as example
+        st.subheader("📋 Template Preview")
+        st.markdown("*Preview of the P&L analysis template with sample data. Upload your data to see full analysis.*")
+        
+        template_preview = create_pl_template()
+        preview_analysis = calculate_pl_metrics(template_preview)
+        
+        if not preview_analysis.empty:
+            # Show sample charts with template data
+            revenue_chart, cost_chart, profit_chart, aum_chart = create_pl_summary_charts(preview_analysis)
+            
+            st.markdown("#### Sample Analysis Preview")
+            
+            # Sample metrics
+            sample_revenue = preview_analysis['Total_Annual_Revenue_USD'].sum()
+            sample_costs = preview_analysis['Total_Costs'].sum()
+            sample_profit = preview_analysis['Gross_Profit'].sum()
+            sample_margin = preview_analysis['Gross_Margin_Percent'].mean()
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Sample Revenue", f"${sample_revenue:,.0f}")
+            with col2:
+                st.metric("Sample Costs", f"${sample_costs:,.0f}")
+            with col3:
+                st.metric("Sample Profit", f"${sample_profit:,.0f}")
+            with col4:
+                st.metric("Sample Margin", f"{sample_margin:.1f}%")
+            
+            # Sample chart
+            st.plotly_chart(profit_chart, use_container_width=True)
+            
+            # Sample data preview
+            st.markdown("#### Template Data Structure")
+            st.dataframe(template_preview.head(), use_container_width=True, hide_index=True)
 
 # Footer
 st.markdown("---")
