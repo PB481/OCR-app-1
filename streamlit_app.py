@@ -78,6 +78,18 @@ if 'competitors_data' not in st.session_state:
 if 'competitors_template_downloaded' not in st.session_state:
     st.session_state.competitors_template_downloaded = False
 
+# Initialize session state for Business Cases
+if 'business_cases' not in st.session_state:
+    st.session_state.business_cases = []
+if 'business_case_data' not in st.session_state:
+    st.session_state.business_case_data = pd.DataFrame()
+if 'parking_lot' not in st.session_state:
+    st.session_state.parking_lot = []
+if 'backlog' not in st.session_state:
+    st.session_state.backlog = []
+if 'roadmap' not in st.session_state:
+    st.session_state.roadmap = []
+
 @st.cache_data
 def load_capital_project_data(uploaded_file: io.BytesIO) -> pd.DataFrame:
     """
@@ -765,6 +777,473 @@ def generate_competitors_excel_report(df, insights):
         insights_df.to_excel(writer, sheet_name='Strategic_Insights')
     
     return output.getvalue()
+
+# Business Case Development Functions
+def create_business_case_template():
+    """Create a comprehensive business case template."""
+    
+    template_data = {
+        # Project Information
+        'Case_ID': ['BC_2024_001', 'BC_2024_002', 'BC_2024_003', 'BC_2024_004', 'BC_2024_005'],
+        'Case_Title': [
+            'AI-Powered NAV Calculation Enhancement',
+            'Real-Time Regulatory Reporting Platform',
+            'Client Portal Modernization Initiative',
+            'Automated Reconciliation System',
+            'Cloud Migration for Fund Administration'
+        ],
+        'Business_Owner': ['John Smith', 'Sarah Johnson', 'Mike Chen', 'Lisa Brown', 'David Wilson'],
+        'Region': ['North America', 'Europe', 'Asia Pacific', 'Global', 'North America'],
+        'Priority_Level': ['High', 'Medium', 'High', 'Low', 'Medium'],
+        'Request_Date': ['2024-01-15', '2024-02-01', '2024-01-30', '2024-02-15', '2024-03-01'],
+        
+        # Financial Information
+        'Estimated_Investment_USD': [2500000, 1800000, 3200000, 950000, 4500000],
+        'Expected_Annual_Savings_USD': [800000, 600000, 1200000, 400000, 1500000],
+        'Implementation_Duration_Months': [18, 12, 24, 8, 36],
+        'ROI_Percentage': [32.0, 33.3, 37.5, 42.1, 33.3],
+        'Payback_Period_Months': [37, 36, 32, 28, 36],
+        
+        # Strategic Alignment
+        'Strategic_Alignment_Score': [8.5, 7.2, 9.1, 6.8, 8.0],
+        'Technology_Complexity_Score': [8, 6, 9, 4, 7],
+        'Implementation_Risk_Score': [7, 5, 8, 3, 6],
+        'Client_Impact_Score': [9, 8, 10, 5, 7],
+        'Regulatory_Impact_Score': [9, 10, 6, 7, 5],
+        
+        # Resource Requirements
+        'FTE_Required': [12, 8, 15, 4, 20],
+        'External_Vendor_Required': ['Yes', 'Yes', 'Yes', 'No', 'Yes'],
+        'Technology_Investment_Percent': [60, 70, 55, 80, 65],
+        'Change_Management_Effort': ['High', 'Medium', 'High', 'Low', 'Medium'],
+        
+        # Business Justification
+        'Problem_Statement': [
+            'Current NAV calculation process is manual and error-prone, taking 4 hours daily',
+            'Regulatory reporting requires 15 FTE with high risk of errors and delays',
+            'Legacy client portal has 2.3/10 satisfaction score and limited functionality',
+            'Daily reconciliation process requires 6 FTE and has 15% error rate',
+            'On-premise infrastructure limits scalability and increases operational risk'
+        ],
+        'Proposed_Solution': [
+            'Implement AI/ML NAV calculation engine with real-time validation',
+            'Deploy cloud-native regulatory reporting platform with automated workflows',
+            'Build modern client portal with self-service capabilities and mobile access',
+            'Implement automated reconciliation system with exception-based processing',
+            'Migrate to cloud infrastructure with enhanced security and scalability'
+        ],
+        'Expected_Benefits': [
+            'Reduce NAV calculation time by 85%, eliminate manual errors, improve accuracy to 99.9%',
+            'Reduce regulatory reporting FTE by 60%, improve accuracy, ensure compliance',
+            'Increase client satisfaction to 8.5/10, reduce support calls by 40%',
+            'Reduce reconciliation FTE by 75%, improve accuracy to 98%',
+            'Reduce infrastructure costs by 30%, improve system availability to 99.9%'
+        ],
+        
+        # Current State Analysis
+        'Current_Process_Efficiency': [3, 4, 2, 4, 3],
+        'Current_Error_Rate_Percent': [12, 8, 25, 15, 10],
+        'Current_Client_Satisfaction': [6.2, 7.1, 2.3, 6.8, 7.0],
+        'Current_FTE_Count': [8, 15, 5, 6, 12],
+        
+        # Target State Goals
+        'Target_Process_Efficiency': [9, 8, 9, 8, 8],
+        'Target_Error_Rate_Percent': [0.1, 0.5, 1.0, 2.0, 0.5],
+        'Target_Client_Satisfaction': [8.5, 8.0, 8.5, 7.5, 8.2],
+        'Target_FTE_Count': [3, 6, 8, 1.5, 8]
+    }
+    
+    return pd.DataFrame(template_data)
+
+def load_business_case_data(uploaded_file):
+    """Load and validate business case data from uploaded file."""
+    try:
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
+        
+        # Basic validation
+        required_columns = ['Case_Title', 'Estimated_Investment_USD', 'Expected_Annual_Savings_USD']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            st.error(f"Missing required columns: {', '.join(missing_columns)}")
+            return pd.DataFrame()
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"Error loading file: {e}")
+        return pd.DataFrame()
+
+def calculate_business_case_score(case_data):
+    """Calculate comprehensive business case score with gap analysis."""
+    
+    scores = {}
+    
+    # Financial Score (30% weight)
+    roi_score = min(case_data.get('ROI_Percentage', 0) / 50 * 10, 10)  # Normalize ROI to 10-point scale
+    payback_score = max(10 - (case_data.get('Payback_Period_Months', 60) / 6), 0)  # Better score for shorter payback
+    financial_score = (roi_score * 0.6 + payback_score * 0.4)
+    scores['Financial'] = financial_score
+    
+    # Strategic Alignment Score (25% weight)
+    strategic_score = case_data.get('Strategic_Alignment_Score', 5)
+    client_impact = case_data.get('Client_Impact_Score', 5)
+    strategic_combined = (strategic_score * 0.7 + client_impact * 0.3)
+    scores['Strategic'] = strategic_combined
+    
+    # Implementation Feasibility Score (20% weight)
+    complexity_penalty = (10 - case_data.get('Technology_Complexity_Score', 5)) / 10 * 10
+    risk_penalty = (10 - case_data.get('Implementation_Risk_Score', 5)) / 10 * 10
+    feasibility_score = (complexity_penalty * 0.5 + risk_penalty * 0.5)
+    scores['Feasibility'] = feasibility_score
+    
+    # Business Impact Score (15% weight)
+    efficiency_gain = (case_data.get('Target_Process_Efficiency', 5) - case_data.get('Current_Process_Efficiency', 5))
+    error_reduction = max(0, case_data.get('Current_Error_Rate_Percent', 0) - case_data.get('Target_Error_Rate_Percent', 0))
+    impact_score = min((efficiency_gain * 0.6 + error_reduction * 0.4), 10)
+    scores['Impact'] = impact_score
+    
+    # Resource Efficiency Score (10% weight)
+    fte_efficiency = max(0, case_data.get('Current_FTE_Count', 0) - case_data.get('Target_FTE_Count', 0))
+    resource_score = min(fte_efficiency * 2, 10)  # Max 10 points
+    scores['Resource'] = resource_score
+    
+    # Calculate overall score
+    weights = {'Financial': 0.30, 'Strategic': 0.25, 'Feasibility': 0.20, 'Impact': 0.15, 'Resource': 0.10}
+    overall_score = sum(scores[category] * weights[category] for category in scores)
+    
+    return overall_score, scores
+
+def create_gap_analysis(case_data):
+    """Perform detailed gap analysis between current and target state."""
+    
+    gaps = {}
+    
+    # Process Efficiency Gap
+    efficiency_gap = case_data.get('Target_Process_Efficiency', 5) - case_data.get('Current_Process_Efficiency', 5)
+    gaps['Process_Efficiency'] = {
+        'current': case_data.get('Current_Process_Efficiency', 5),
+        'target': case_data.get('Target_Process_Efficiency', 5),
+        'gap': efficiency_gap,
+        'improvement_percent': (efficiency_gap / case_data.get('Current_Process_Efficiency', 5)) * 100 if case_data.get('Current_Process_Efficiency', 5) > 0 else 0
+    }
+    
+    # Error Rate Gap
+    error_gap = case_data.get('Current_Error_Rate_Percent', 0) - case_data.get('Target_Error_Rate_Percent', 0)
+    gaps['Error_Rate'] = {
+        'current': case_data.get('Current_Error_Rate_Percent', 0),
+        'target': case_data.get('Target_Error_Rate_Percent', 0),
+        'gap': error_gap,
+        'improvement_percent': (error_gap / case_data.get('Current_Error_Rate_Percent', 1)) * 100 if case_data.get('Current_Error_Rate_Percent', 1) > 0 else 0
+    }
+    
+    # Client Satisfaction Gap
+    satisfaction_gap = case_data.get('Target_Client_Satisfaction', 5) - case_data.get('Current_Client_Satisfaction', 5)
+    gaps['Client_Satisfaction'] = {
+        'current': case_data.get('Current_Client_Satisfaction', 5),
+        'target': case_data.get('Target_Client_Satisfaction', 5),
+        'gap': satisfaction_gap,
+        'improvement_percent': (satisfaction_gap / case_data.get('Current_Client_Satisfaction', 5)) * 100 if case_data.get('Current_Client_Satisfaction', 5) > 0 else 0
+    }
+    
+    # FTE Efficiency Gap
+    fte_gap = case_data.get('Current_FTE_Count', 0) - case_data.get('Target_FTE_Count', 0)
+    gaps['FTE_Count'] = {
+        'current': case_data.get('Current_FTE_Count', 0),
+        'target': case_data.get('Target_FTE_Count', 0),
+        'gap': fte_gap,
+        'improvement_percent': (fte_gap / case_data.get('Current_FTE_Count', 1)) * 100 if case_data.get('Current_FTE_Count', 1) > 0 else 0
+    }
+    
+    return gaps
+
+def integrate_supporting_data(case_data):
+    """Integrate relevant data from other tabs to support the business case."""
+    
+    supporting_data = {}
+    
+    # Workstream Data Integration
+    if st.session_state.workstream_data:
+        workstream_df = pd.DataFrame(st.session_state.workstream_data)
+        
+        # Find related workstreams
+        case_title = case_data.get('Case_Title', '').lower()
+        related_workstreams = []
+        
+        for _, ws in workstream_df.iterrows():
+            ws_name = ws['name'].lower()
+            # Simple keyword matching
+            if any(keyword in ws_name for keyword in ['nav', 'calculation', 'reporting', 'reconciliation']):
+                related_workstreams.append({
+                    'name': ws['name'],
+                    'complexity': ws['complexity'],
+                    'automation': ws['automation'],
+                    'risk': ws['risk'],
+                    'investment': ws['investment'],
+                    'completion': ws['completion']
+                })
+        
+        supporting_data['related_workstreams'] = related_workstreams
+    
+    # P&L Data Integration
+    if not st.session_state.pl_data.empty:
+        pl_df = st.session_state.pl_data
+        
+        # Calculate potential revenue impact
+        avg_revenue_per_client = pl_df['Total_Annual_Revenue_USD'].mean()
+        total_clients = len(pl_df)
+        
+        supporting_data['revenue_context'] = {
+            'avg_revenue_per_client': avg_revenue_per_client,
+            'total_clients': total_clients,
+            'potential_revenue_at_risk': avg_revenue_per_client * 0.1  # Assume 10% at risk
+        }
+    
+    # Competitors Data Integration
+    if not st.session_state.competitors_data.empty:
+        comp_df = st.session_state.competitors_data
+        
+        # Technology investment benchmarks
+        avg_tech_investment = comp_df['Technology_Investment_Percent'].mean()
+        tech_leaders = comp_df[comp_df['AI_ML_Capabilities'] == 'Advanced']['Competitor_Name'].tolist()
+        
+        supporting_data['competitive_context'] = {
+            'avg_tech_investment': avg_tech_investment,
+            'tech_leaders': tech_leaders,
+            'market_pressure': len(tech_leaders) / len(comp_df) * 100
+        }
+    
+    return supporting_data
+
+def generate_business_case_document(case_data, score_data, gap_analysis, supporting_data):
+    """Generate a comprehensive Word document for the business case."""
+    
+    # Since python-docx might not be available, we'll create a comprehensive text document
+    # that can be easily converted to Word format
+    
+    document_content = f"""
+# BUSINESS CASE DOCUMENT
+## {case_data.get('Case_Title', 'Untitled Business Case')}
+
+---
+
+## EXECUTIVE SUMMARY
+
+**Case ID:** {case_data.get('Case_ID', 'N/A')}
+**Business Owner:** {case_data.get('Business_Owner', 'N/A')}
+**Region:** {case_data.get('Region', 'N/A')}
+**Priority Level:** {case_data.get('Priority_Level', 'N/A')}
+**Request Date:** {case_data.get('Request_Date', 'N/A')}
+
+**Overall Business Case Score:** {score_data[0]:.2f}/10
+
+### Investment Summary
+- **Total Investment:** ${case_data.get('Estimated_Investment_USD', 0):,.0f}
+- **Expected Annual Savings:** ${case_data.get('Expected_Annual_Savings_USD', 0):,.0f}
+- **ROI:** {case_data.get('ROI_Percentage', 0):.1f}%
+- **Payback Period:** {case_data.get('Payback_Period_Months', 0)} months
+- **Implementation Duration:** {case_data.get('Implementation_Duration_Months', 0)} months
+
+---
+
+## BUSINESS JUSTIFICATION
+
+### Problem Statement
+{case_data.get('Problem_Statement', 'No problem statement provided.')}
+
+### Proposed Solution
+{case_data.get('Proposed_Solution', 'No solution description provided.')}
+
+### Expected Benefits
+{case_data.get('Expected_Benefits', 'No benefits description provided.')}
+
+---
+
+## SCORING ANALYSIS
+
+### Detailed Scores
+"""
+    
+    for category, score in score_data[1].items():
+        document_content += f"- **{category}:** {score:.2f}/10\n"
+    
+    document_content += f"""
+
+### Score Interpretation
+- **8.0-10.0:** Excellent - High priority for immediate implementation
+- **6.0-7.9:** Good - Consider for next planning cycle
+- **4.0-5.9:** Fair - Requires improvement or postponement
+- **0.0-3.9:** Poor - Not recommended for implementation
+
+**Current Score: {score_data[0]:.2f}/10 - {get_score_category(score_data[0])}**
+
+---
+
+## GAP ANALYSIS
+
+### Current State vs Target State Analysis
+"""
+    
+    for metric, gap_data in gap_analysis.items():
+        document_content += f"""
+#### {metric.replace('_', ' ')}
+- **Current State:** {gap_data['current']}
+- **Target State:** {gap_data['target']}
+- **Gap:** {gap_data['gap']:.2f}
+- **Improvement:** {gap_data['improvement_percent']:.1f}%
+"""
+    
+    document_content += f"""
+
+---
+
+## SUPPORTING DATA ANALYSIS
+
+### Related Workstreams
+"""
+    
+    if supporting_data.get('related_workstreams'):
+        for ws in supporting_data['related_workstreams']:
+            document_content += f"""
+- **{ws['name']}**
+  - Complexity: {ws['complexity']}/10
+  - Automation: {ws['automation']}/10
+  - Risk: {ws['risk']}/10
+  - Investment: ${ws['investment']:.1f}M
+  - Completion: {ws['completion']}%
+"""
+    else:
+        document_content += "No related workstreams identified.\n"
+    
+    if supporting_data.get('revenue_context'):
+        rev_ctx = supporting_data['revenue_context']
+        document_content += f"""
+
+### Revenue Impact Analysis
+- **Average Revenue per Client:** ${rev_ctx['avg_revenue_per_client']:,.0f}
+- **Total Client Base:** {rev_ctx['total_clients']}
+- **Potential Revenue at Risk:** ${rev_ctx['potential_revenue_at_risk']:,.0f}
+"""
+    
+    if supporting_data.get('competitive_context'):
+        comp_ctx = supporting_data['competitive_context']
+        document_content += f"""
+
+### Competitive Context
+- **Industry Avg Tech Investment:** {comp_ctx['avg_tech_investment']:.1f}%
+- **Technology Leaders:** {', '.join(comp_ctx['tech_leaders'][:3]) if comp_ctx['tech_leaders'] else 'None identified'}
+- **Market Pressure Score:** {comp_ctx['market_pressure']:.1f}%
+"""
+    
+    document_content += f"""
+
+---
+
+## IMPLEMENTATION PLAN
+
+### Resource Requirements
+- **FTE Required:** {case_data.get('FTE_Required', 0)}
+- **External Vendor:** {case_data.get('External_Vendor_Required', 'TBD')}
+- **Technology Investment:** {case_data.get('Technology_Investment_Percent', 0)}%
+- **Change Management Effort:** {case_data.get('Change_Management_Effort', 'TBD')}
+
+### Risk Assessment
+- **Technology Complexity Score:** {case_data.get('Technology_Complexity_Score', 5)}/10
+- **Implementation Risk Score:** {case_data.get('Implementation_Risk_Score', 5)}/10
+
+---
+
+## RECOMMENDATIONS
+
+Based on the analysis, this business case scores **{score_data[0]:.2f}/10**.
+
+"""
+    
+    if score_data[0] >= 8.0:
+        document_content += "**RECOMMENDATION: APPROVE FOR IMMEDIATE IMPLEMENTATION**\n"
+        document_content += "This case demonstrates exceptional value and should be prioritized for the current planning cycle.\n"
+    elif score_data[0] >= 6.0:
+        document_content += "**RECOMMENDATION: CONSIDER FOR NEXT CYCLE**\n"
+        document_content += "This case shows good potential and should be considered for the next planning cycle with minor improvements.\n"
+    elif score_data[0] >= 4.0:
+        document_content += "**RECOMMENDATION: REVISE AND RESUBMIT**\n"
+        document_content += "This case requires significant improvements before it can be recommended for implementation.\n"
+    else:
+        document_content += "**RECOMMENDATION: REJECT**\n"
+        document_content += "This case does not meet the minimum criteria for implementation at this time.\n"
+    
+    document_content += f"""
+
+---
+
+**Document Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Generated By:** Iluvalcar 2.0 Business Case Development System
+"""
+    
+    return document_content
+
+def get_score_category(score):
+    """Get score category description."""
+    if score >= 8.0:
+        return "Excellent"
+    elif score >= 6.0:
+        return "Good"
+    elif score >= 4.0:
+        return "Fair"
+    else:
+        return "Poor"
+
+def move_to_parking_lot(case_data, score, threshold=6.0):
+    """Move qualifying business cases to parking lot."""
+    if score >= threshold:
+        parking_item = {
+            'case_id': case_data.get('Case_ID'),
+            'title': case_data.get('Case_Title'),
+            'score': score,
+            'investment': case_data.get('Estimated_Investment_USD'),
+            'roi': case_data.get('ROI_Percentage'),
+            'priority': case_data.get('Priority_Level'),
+            'region': case_data.get('Region'),
+            'date_added': datetime.now().strftime('%Y-%m-%d'),
+            'status': 'Parking Lot'
+        }
+        
+        if parking_item not in st.session_state.parking_lot:
+            st.session_state.parking_lot.append(parking_item)
+        
+        return True
+    return False
+
+def promote_to_backlog(parking_item):
+    """Promote item from parking lot to backlog."""
+    backlog_item = parking_item.copy()
+    backlog_item['status'] = 'Backlog'
+    backlog_item['date_promoted'] = datetime.now().strftime('%Y-%m-%d')
+    
+    if backlog_item not in st.session_state.backlog:
+        st.session_state.backlog.append(backlog_item)
+    
+    # Remove from parking lot
+    if parking_item in st.session_state.parking_lot:
+        st.session_state.parking_lot.remove(parking_item)
+
+def add_to_roadmap(backlog_item, quarter, year):
+    """Add item from backlog to roadmap."""
+    roadmap_item = backlog_item.copy()
+    roadmap_item['status'] = 'Roadmap'
+    roadmap_item['planned_quarter'] = quarter
+    roadmap_item['planned_year'] = year
+    roadmap_item['date_scheduled'] = datetime.now().strftime('%Y-%m-%d')
+    
+    if roadmap_item not in st.session_state.roadmap:
+        st.session_state.roadmap.append(roadmap_item)
+    
+    # Remove from backlog
+    if backlog_item in st.session_state.backlog:
+        st.session_state.backlog.remove(backlog_item)
 
 def get_category_color(category):
     """Return color for each workstream category"""
@@ -2233,14 +2712,15 @@ This application provides a comprehensive view of fund administration operationa
 """)
 
 # Create tabs for different sections
-main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6, main_tab7 = st.tabs([
+main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6, main_tab7, main_tab8 = st.tabs([
     "🧪 Workstream Views",
     "📊 3D Analysis", 
     "⚙️ Manage Workstreams",
     "💰 Capital Projects",
     "📄 Source Code",
     "💼 P&L Analysis",
-    "🏆 Competitors Analysis"
+    "🏆 Competitors Analysis",
+    "📋 Business Cases"
 ])
 
 with main_tab1:
@@ -3681,6 +4161,387 @@ with main_tab7:
                         use_container_width=True, hide_index=True)
             
             st.session_state.competitors_data = pd.DataFrame()  # Reset after preview
+
+with main_tab8:
+    st.markdown("### 📋 Business Case Development & Management")
+    st.markdown("*Comprehensive business case creation system with scoring, gap analysis, and workflow management for capital funds and offering enhancements.*")
+    
+    st.markdown("---")
+    
+    # Business Case Development Framework
+    with st.expander("🏗️ Business Case Development Framework", expanded=False):
+        st.markdown("""
+        ### Strategic Business Case Development Process
+        
+        **Business Case Creation:**
+        - Comprehensive template with financial metrics, strategic alignment, and feasibility assessment
+        - Integration with existing workstream, P&L, and competitive data
+        - Qualitative assessment with region and workstream targeting
+        
+        **Scoring & Gap Analysis Engine:**
+        - Weighted scoring across 5 categories: Financial (30%), Strategic (25%), Feasibility (20%), Impact (15%), Resource (10%)
+        - Current vs Target state gap analysis with detailed recommendations
+        - Automated threshold scoring for workflow progression
+        
+        **Workflow Management System:**
+        - **Parking Lot**: Cases scoring above threshold (70+) for initial assessment
+        - **Backlog**: Approved cases ready for capital fund allocation
+        - **Roadmap**: Prioritized cases with timeline for offering enhancement
+        
+        **Document Generation:**
+        - Professional Word document generation with comprehensive business case formatting
+        - Integration of supporting data from all platform modules
+        - Executive summary with recommendations and next steps
+        """)
+    
+    # Create main interface tabs
+    bc_tab1, bc_tab2, bc_tab3, bc_tab4 = st.tabs([
+        "📝 Create Business Case",
+        "📊 Scoring & Analysis", 
+        "🗂️ Management Pipeline",
+        "📤 Export & Reports"
+    ])
+    
+    with bc_tab1:
+        st.markdown("#### Business Case Creation")
+        
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.markdown("##### Template Upload & Download")
+            
+            # Download business case template
+            template_data = create_business_case_template()
+            template_buffer = io.BytesIO()
+            with pd.ExcelWriter(template_buffer, engine='xlsxwriter') as writer:
+                template_data.to_excel(writer, sheet_name='Business_Case_Template', index=False)
+            
+            st.download_button(
+                label="📋 Download Business Case Template",
+                data=template_buffer.getvalue(),
+                file_name="Business_Case_Template.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
+            # Upload business case data
+            uploaded_bc_file = st.file_uploader("Upload Business Case Data", type=['xlsx', 'csv'], key="bc_upload")
+            
+            if uploaded_bc_file:
+                try:
+                    if uploaded_bc_file.name.endswith('.csv'):
+                        bc_data = pd.read_csv(uploaded_bc_file)
+                    else:
+                        bc_data = pd.read_excel(uploaded_bc_file)
+                    
+                    st.session_state.business_case_data = bc_data
+                    st.success(f"✅ Loaded {len(bc_data)} business case records")
+                    
+                except Exception as e:
+                    st.error(f"Error loading business case data: {e}")
+        
+        with col2:
+            st.markdown("##### Quick Business Case Creation")
+            
+            with st.form("quick_business_case"):
+                bc_name = st.text_input("Business Case Name*", placeholder="e.g., Enhanced NAV Calculation Platform")
+                
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    bc_workstream = st.selectbox("Primary Workstream", [
+                        'NAV Calculation', 'Portfolio Valuation', 'Trade Capture',
+                        'Reconciliation', 'Corporate Actions', 'Expense Management', 'Reporting'
+                    ])
+                    bc_region = st.selectbox("Target Region", ['North America', 'Europe', 'Asia-Pacific', 'Global', 'Latin America'])
+                
+                with col_b:
+                    bc_investment = st.number_input("Investment Required ($M)", min_value=0.0, max_value=100.0, value=5.0, step=0.5)
+                    bc_timeline = st.selectbox("Implementation Timeline", ['3 months', '6 months', '12 months', '18 months', '24+ months'])
+                
+                bc_description = st.text_area("Business Case Description*", 
+                    placeholder="Describe the business case, objectives, and expected outcomes...")
+                
+                bc_rationale = st.text_area("Strategic Rationale", 
+                    placeholder="Explain why this investment is critical and aligned with strategic objectives...")
+                
+                submitted = st.form_submit_button("🚀 Create Business Case", type="primary")
+                
+                if submitted and bc_name and bc_description:
+                    # Create quick business case
+                    quick_bc = {
+                        'Case_Name': bc_name,
+                        'Primary_Workstream': bc_workstream,
+                        'Target_Region': bc_region,
+                        'Investment_Required_M': bc_investment,
+                        'Implementation_Timeline': bc_timeline,
+                        'Description': bc_description,
+                        'Strategic_Rationale': bc_rationale,
+                        'Creation_Date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'Status': 'Draft'
+                    }
+                    
+                    # Add to session state
+                    if len(st.session_state.business_cases) == 0:
+                        st.session_state.business_cases = [quick_bc]
+                    else:
+                        st.session_state.business_cases.append(quick_bc)
+                    
+                    st.success(f"✅ Created business case: {bc_name}")
+                    st.rerun()
+    
+    with bc_tab2:
+        st.markdown("#### Scoring & Gap Analysis Dashboard")
+        
+        if len(st.session_state.business_cases) > 0 or not st.session_state.business_case_data.empty:
+            # Combine quick cases and uploaded data
+            all_cases = []
+            
+            # Add quick cases
+            for case in st.session_state.business_cases:
+                all_cases.append(case)
+            
+            # Add uploaded cases
+            if not st.session_state.business_case_data.empty:
+                for _, row in st.session_state.business_case_data.iterrows():
+                    case_dict = row.to_dict()
+                    all_cases.append(case_dict)
+            
+            if all_cases:
+                st.markdown(f"##### Analysis of {len(all_cases)} Business Cases")
+                
+                # Score all cases
+                scored_cases = []
+                for case in all_cases:
+                    # Integrate supporting data
+                    supporting_data = integrate_supporting_data(
+                        case.get('Primary_Workstream', 'NAV Calculation'),
+                        case.get('Target_Region', 'Global')
+                    )
+                    
+                    # Calculate score
+                    score_results = calculate_business_case_score(case, supporting_data)
+                    case_with_score = {**case, **score_results}
+                    scored_cases.append(case_with_score)
+                
+                # Create scoring dashboard
+                scores_df = pd.DataFrame(scored_cases)
+                
+                # Summary metrics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    avg_score = scores_df['Total_Score'].mean()
+                    st.metric("Average Score", f"{avg_score:.1f}/100")
+                
+                with col2:
+                    high_score = len(scores_df[scores_df['Total_Score'] >= 70])
+                    st.metric("High Score Cases", f"{high_score}/{len(scores_df)}")
+                
+                with col3:
+                    total_investment = scores_df['Investment_Required_M'].sum()
+                    st.metric("Total Investment", f"${total_investment:.1f}M")
+                
+                with col4:
+                    pipeline_ready = len(scores_df[scores_df['Total_Score'] >= 70])
+                    st.metric("Pipeline Ready", pipeline_ready)
+                
+                # Scoring visualization
+                st.markdown("##### Scoring Analysis")
+                
+                fig_scores = px.scatter(
+                    scores_df,
+                    x='Financial_Score',
+                    y='Strategic_Score',
+                    size='Investment_Required_M',
+                    color='Total_Score',
+                    hover_name='Case_Name',
+                    hover_data=['Feasibility_Score', 'Impact_Score', 'Resource_Score'],
+                    title="Business Case Scoring Matrix",
+                    labels={
+                        'Financial_Score': 'Financial Score',
+                        'Strategic_Score': 'Strategic Score',
+                        'Total_Score': 'Total Score'
+                    },
+                    color_continuous_scale='RdYlGn'
+                )
+                
+                fig_scores.add_hline(y=70, line_dash="dash", line_color="red", annotation_text="Strategic Threshold")
+                fig_scores.add_vline(x=70, line_dash="dash", line_color="red", annotation_text="Financial Threshold")
+                
+                st.plotly_chart(fig_scores, use_container_width=True)
+                
+                # Gap analysis for top cases
+                st.markdown("##### Gap Analysis - Top Performing Cases")
+                top_cases = scores_df.nlargest(5, 'Total_Score')
+                
+                for _, case in top_cases.iterrows():
+                    with st.expander(f"📊 {case['Case_Name']} - Score: {case['Total_Score']:.1f}/100"):
+                        gap_analysis = perform_gap_analysis(case.to_dict())
+                        
+                        # Score breakdown
+                        score_col1, score_col2 = st.columns(2)
+                        with score_col1:
+                            st.markdown("**Score Breakdown:**")
+                            st.write(f"• Financial: {case['Financial_Score']:.1f}/100")
+                            st.write(f"• Strategic: {case['Strategic_Score']:.1f}/100") 
+                            st.write(f"• Feasibility: {case['Feasibility_Score']:.1f}/100")
+                            st.write(f"• Impact: {case['Impact_Score']:.1f}/100")
+                            st.write(f"• Resource: {case['Resource_Score']:.1f}/100")
+                        
+                        with score_col2:
+                            st.markdown("**Gap Analysis:**")
+                            for gap in gap_analysis.get('gaps', []):
+                                st.write(f"⚠️ {gap}")
+                            
+                            if gap_analysis.get('recommendations'):
+                                st.markdown("**Recommendations:**")
+                                for rec in gap_analysis['recommendations']:
+                                    st.write(f"💡 {rec}")
+        else:
+            st.info("📝 Create business cases in the 'Create Business Case' tab to see scoring analysis.")
+    
+    with bc_tab3:
+        st.markdown("#### Business Case Management Pipeline")
+        
+        # Initialize pipeline states
+        parking_lot_cases = [case for case in st.session_state.parking_lot if case.get('Total_Score', 0) >= 70]
+        backlog_cases = st.session_state.backlog
+        roadmap_cases = st.session_state.roadmap
+        
+        # Pipeline overview
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("##### 🅿️ Parking Lot")
+            st.info(f"{len(parking_lot_cases)} cases awaiting assessment")
+            
+            if parking_lot_cases:
+                for case in parking_lot_cases:
+                    with st.expander(f"{case.get('Case_Name', 'Unknown Case')} - {case.get('Total_Score', 0):.1f}/100"):
+                        st.write(f"**Investment:** ${case.get('Investment_Required_M', 0):.1f}M")
+                        st.write(f"**Workstream:** {case.get('Primary_Workstream', 'N/A')}")
+                        st.write(f"**Region:** {case.get('Target_Region', 'N/A')}")
+                        
+                        if st.button(f"Move to Backlog", key=f"move_backlog_{case.get('Case_Name', '')}"): 
+                            st.session_state.backlog.append(case)
+                            st.session_state.parking_lot.remove(case)
+                            st.rerun()
+        
+        with col2:
+            st.markdown("##### 📋 Backlog")
+            st.warning(f"{len(backlog_cases)} cases ready for capital allocation")
+            
+            if backlog_cases:
+                for case in backlog_cases:
+                    with st.expander(f"{case.get('Case_Name', 'Unknown Case')}"):
+                        st.write(f"**Investment:** ${case.get('Investment_Required_M', 0):.1f}M")
+                        st.write(f"**Score:** {case.get('Total_Score', 0):.1f}/100")
+                        
+                        if st.button(f"Add to Roadmap", key=f"move_roadmap_{case.get('Case_Name', '')}"):
+                            st.session_state.roadmap.append(case)
+                            st.session_state.backlog.remove(case)
+                            st.rerun()
+        
+        with col3:
+            st.markdown("##### 🗺️ Roadmap")
+            st.success(f"{len(roadmap_cases)} cases in delivery pipeline")
+            
+            if roadmap_cases:
+                for case in roadmap_cases:
+                    with st.expander(f"{case.get('Case_Name', 'Unknown Case')}"):
+                        st.write(f"**Timeline:** {case.get('Implementation_Timeline', 'TBD')}")
+                        st.write(f"**Investment:** ${case.get('Investment_Required_M', 0):.1f}M")
+                        st.write(f"**Score:** {case.get('Total_Score', 0):.1f}/100")
+        
+        # Pipeline analytics
+        st.markdown("---")
+        st.markdown("##### 📈 Pipeline Analytics")
+        
+        total_pipeline_investment = sum([case.get('Investment_Required_M', 0) for case in parking_lot_cases + backlog_cases + roadmap_cases])
+        
+        pipeline_col1, pipeline_col2, pipeline_col3 = st.columns(3)
+        with pipeline_col1:
+            st.metric("Total Pipeline Value", f"${total_pipeline_investment:.1f}M")
+        with pipeline_col2:
+            total_cases = len(parking_lot_cases) + len(backlog_cases) + len(roadmap_cases)
+            st.metric("Total Pipeline Cases", total_cases)
+        with pipeline_col3:
+            if total_cases > 0:
+                avg_investment = total_pipeline_investment / total_cases
+                st.metric("Avg Case Investment", f"${avg_investment:.1f}M")
+    
+    with bc_tab4:
+        st.markdown("#### Export & Document Generation")
+        
+        if len(st.session_state.business_cases) > 0 or not st.session_state.business_case_data.empty:
+            st.markdown("##### Generate Professional Documents")
+            
+            # Select business case for document generation
+            all_case_names = []
+            all_cases_dict = {}
+            
+            for case in st.session_state.business_cases:
+                name = case.get('Case_Name', 'Unnamed Case')
+                all_case_names.append(name)
+                all_cases_dict[name] = case
+            
+            if not st.session_state.business_case_data.empty:
+                for _, row in st.session_state.business_case_data.iterrows():
+                    name = row.get('Case_Name', f"Case_{len(all_case_names)+1}")
+                    all_case_names.append(name)
+                    all_cases_dict[name] = row.to_dict()
+            
+            selected_case = st.selectbox("Select Business Case for Document Generation", all_case_names)
+            
+            if selected_case and selected_case in all_cases_dict:
+                case_data = all_cases_dict[selected_case]
+                
+                # Add scoring if not present
+                if 'Total_Score' not in case_data:
+                    supporting_data = integrate_supporting_data(
+                        case_data.get('Primary_Workstream', 'NAV Calculation'),
+                        case_data.get('Target_Region', 'Global')
+                    )
+                    score_results = calculate_business_case_score(case_data, supporting_data)
+                    case_data.update(score_results)
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Generate Word document
+                    if st.button("📄 Generate Word Document", type="primary"):
+                        word_doc = generate_business_case_word_document(case_data)
+                        
+                        st.download_button(
+                            label="📥 Download Business Case Document",
+                            data=word_doc,
+                            file_name=f"Business_Case_{selected_case.replace(' ', '_')}.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        )
+                
+                with col2:
+                    # Export pipeline summary
+                    if st.button("📊 Export Pipeline Report"):
+                        all_pipeline_cases = st.session_state.parking_lot + st.session_state.backlog + st.session_state.roadmap
+                        
+                        if all_pipeline_cases:
+                            pipeline_df = pd.DataFrame(all_pipeline_cases)
+                            
+                            pipeline_buffer = io.BytesIO()
+                            with pd.ExcelWriter(pipeline_buffer, engine='xlsxwriter') as writer:
+                                pipeline_df.to_excel(writer, sheet_name='Pipeline_Summary', index=False)
+                            
+                            st.download_button(
+                                label="📥 Download Pipeline Report",
+                                data=pipeline_buffer.getvalue(),
+                                file_name=f"Business_Case_Pipeline_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            )
+                
+                # Case preview
+                st.markdown("##### Selected Business Case Preview")
+                st.json(case_data)
+        
+        else:
+            st.info("📝 Create business cases to generate documents and reports.")
 
 # Footer
 st.markdown("---")
